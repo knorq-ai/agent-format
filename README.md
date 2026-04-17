@@ -26,22 +26,24 @@ export default function Page() {
 
 ## Section support (v0.1)
 
-| Type | Status |
-|---|---|
-| `kanban` | ✅ Implemented |
-| `notes` | ✅ Implemented |
-| `log` | ✅ Implemented |
-| `metrics` | ✅ Implemented |
-| `checklist` | ⏳ Fallback |
-| `timeline` | ⏳ Fallback |
-| `table` | ⏳ Fallback |
-| `diagram` | ⏳ Fallback |
-| `report` | ⏳ Fallback |
-| `form` | ⏳ Fallback |
-| `links` | ⏳ Fallback |
-| `references` | ⏳ Fallback |
+All 12 v0.1 section types are implemented:
 
-Unimplemented section types render as a fallback showing the raw JSON, per the spec's conformance rule that readers MUST NOT error on unknown section types.
+| Type | Use for |
+|---|---|
+| `kanban` | Status-column board with cards, labels, WIP limits |
+| `checklist` | Grouped todo items with progress counts |
+| `notes` | Ordered markdown blocks |
+| `timeline` | Items + milestones with dates |
+| `table` | Rows with typed columns (text / number / date / select / status) |
+| `log` | Risks, decisions, issues with badges |
+| `metrics` | KPI cards with value / unit / trend |
+| `diagram` | Nested tree (mind map / hierarchy) |
+| `report` | Repeating markdown reports |
+| `form` | Input fields + submission count |
+| `links` | URL list grouped by category |
+| `references` | File references with memos |
+
+Unknown section types render as a fallback showing the raw JSON, per the spec's conformance rule that readers MUST NOT error on unknown section types.
 
 ## Styling
 
