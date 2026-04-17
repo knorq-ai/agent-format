@@ -1,15 +1,19 @@
 # Agent File Format
 
-**A portable file format for the visual memory of an AI agent.**
+**A structured alternative to HTML for AI-generated visualizations — editable by the user, re-readable by the agent.**
 
 > Status: **Draft v0.1** — not yet stable. Expect breaking changes until v1.0.
 
-An `.agent.json` file is a single portable artifact that contains **both**:
+When you ask an AI to "turn this email into a kanban" or "visualize this PDF as a mindmap," today it writes hundreds of lines of HTML/CSS for something that should be a few dozen lines of data. The output is static, expensive to generate, and round-trip-lossy — drag a card and the agent can't re-read your edits.
 
-1. **What the agent knows** — structured data the agent stores and reads back (tasks, notes, events, metrics, observations).
-2. **How that data should look** — typed, closed-schema widgets (kanban, checklist, timeline, table, metrics, diagram, report, form, links, references, notes, log).
+`.agent.json` is a typed JSON artifact that:
 
-The same artifact is the agent's memory *and* the human's dashboard. Both sides edit the same file. The rendering is not a view over separate storage — **the file on disk is the memory**.
+1. **The agent writes as data** — tens of lines of JSON instead of hundreds of lines of HTML.
+2. **Renders as a rich interactive UI** — kanban, timeline, mindmap, table, metrics, log, and more — via any conformant renderer.
+3. **The user edits directly** — drag cards, inline text, no "copy and re-prompt."
+4. **The agent re-reads next time** — changes persist; state survives across sessions.
+
+Because the file is just JSON on disk, you can commit it to git, email it, share it between apps. The same artifact is the agent's output *and* the human's working surface.
 
 ---
 
@@ -19,12 +23,12 @@ Today's AI products pick one of four shapes:
 
 | Category | Example | What they miss |
 |---|---|---|
+| HTML artifacts | Claude Artifacts, ChatGPT Canvas | Static output, expensive to generate, round-trip-lossy — edits don't flow back to the agent |
+| Generative UI | A2UI, MCP Apps | Transient per-response, not a portable file the user can keep |
+| AI dashboards | Notion AI, OpenBB | Dashboard over external data, not an agent-authored artifact the agent can re-read |
 | Agent memory infra | Letta `.af`, Mem0, Zep | No UI — memory is text/vectors the human doesn't see |
-| Generative UI | A2UI, MCP Apps, Claude Artifacts | Transient per-response — not persistent memory |
-| AI dashboards | Notion AI, OpenBB | Dashboard over external data, not agent-authored memory |
-| Typed PKM | Tana, Capacities | Human-authored schemas, generic outline rendering |
 
-None of them ship the combination of **(a) portable file on disk** + **(b) closed-schema widgets the agent picks per concept** + **(c) rendering that IS the storage** + **(d) agent memory that the agent reads back next session**.
+None of them ship the combination of **(a) portable file on disk** + **(b) closed-schema widgets the agent picks per concept** + **(c) rich rendered UI the user can edit** + **(d) round-trip back to the agent via re-read**.
 
 That combination is what this spec defines.
 
