@@ -4,10 +4,10 @@ This is a draft spec. Contributions are welcome at this stage — the goal is to
 
 ## What we're looking for
 
-- **Second renderers.** The strongest way to help: build a reader for `.agent.json` in a different host (Obsidian plugin, VS Code extension, Raycast, CLI, static site). Interop is what turns a format into a standard.
+- **Second renderers.** The strongest way to help: build a reader for `.agent` in a different host (Obsidian plugin, VS Code extension, Raycast, CLI, static site). Interop is what turns a format into a standard.
 - **Section type proposals.** If you have a real use case a current section type can't express, open an issue describing (a) the use case, (b) the proposed schema, (c) how an LLM would edit it reliably.
 - **Schema fixes.** Mismatches between `SPEC.md` and `schemas/agent.schema.json`, or ambiguous wording.
-- **Example files.** Real `.agent.json` files covering use cases we don't have examples for.
+- **Example files.** Real `.agent` files covering use cases we don't have examples for.
 
 ## How to propose a change
 

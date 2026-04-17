@@ -15,7 +15,7 @@ A conforming renderer MUST display each section using the section's type-specifi
 
 1. **The file is the memory.** No separate vector store, no separate database. Writers persist state by writing the JSON. Readers load state by parsing the JSON.
 2. **Typed, closed schemas per widget.** Each section type has a well-defined shape. LLMs produce reliable edits because the schema is narrow.
-3. **Portable.** A user can commit an `.agent.json` to git, attach it to an email, or share it between apps.
+3. **Portable.** A user can commit an `.agent` file to git, attach it to an email, or share it between apps.
 4. **Human- and agent-editable.** The format is designed to be read and written by *both* a human through a UI and an LLM through direct JSON manipulation.
 5. **Extensible without breaking.** Unknown fields MUST be preserved by round-trippers; unknown section types MUST NOT error the reader.
 
@@ -23,10 +23,12 @@ A conforming renderer MUST display each section using the section's type-specifi
 
 | Property | Value |
 |---|---|
-| Extension | `.agent.json` (canonical), `.agent` (accepted) |
+| Extension | `.agent` |
 | MIME type | `application/agent+json` |
 | Encoding | UTF-8, no BOM |
 | Line endings | LF (`\n`) recommended |
+
+Files MUST use the `.agent` extension. Editors and tools that need JSON-aware behavior SHOULD register a file association for `.agent` (e.g. a VS Code language extension mapping `.agent` to `jsonc`), rather than renaming the file.
 
 ---
 
@@ -356,7 +358,7 @@ Custom section types are not yet standardized. v0.2 will formalize an extension 
 
 ## 8. Security considerations
 
-- `.agent.json` files are often authored by LLMs. Renderers MUST treat all string content (including `customInstructions`, `observations`, `description`) as untrusted, and MUST escape or sandbox any HTML/markdown rendering.
+- `.agent` files are often authored by LLMs. Renderers MUST treat all string content (including `customInstructions`, `observations`, `description`) as untrusted, and MUST escape or sandbox any HTML/markdown rendering.
 - `references[].filePath` MUST NOT be followed outside of user consent; traversal (`..`) SHOULD be rejected by default.
 - Renderers MUST NOT execute JavaScript from `notes` or `report` markdown content.
 

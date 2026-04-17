@@ -6,7 +6,7 @@
 
 When you ask an AI to "turn this email into a kanban" or "visualize this PDF as a mindmap," today it writes hundreds of lines of HTML/CSS for something that should be a few dozen lines of data. The output is static, expensive to generate, and round-trip-lossy — drag a card and the agent can't re-read your edits.
 
-`.agent.json` is a typed JSON artifact that:
+`.agent` is a typed JSON artifact that:
 
 1. **The agent writes as data** — tens of lines of JSON instead of hundreds of lines of HTML.
 2. **Renders as a rich interactive UI** — kanban, timeline, mindmap, table, metrics, log, and more — via any conformant renderer.
@@ -120,7 +120,7 @@ See [SPEC.md](./SPEC.md) § Conformance for details.
 
 ## Reference implementation
 
-- **[Tsuzuri](https://github.com/knorq-ai/tsuzuri)** — desktop app (Tauri) and web, reads/writes `.agent.json` with Claude Code integration. The renderers here are the reference implementation for v0.1.
+- **[Tsuzuri](https://github.com/knorq-ai/tsuzuri)** — desktop app (Tauri) and web, reads/writes `.agent` files with Claude Code integration. The renderers here are the reference implementation for v0.1.
 
 Want to add a renderer? See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
