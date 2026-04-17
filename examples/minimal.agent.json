@@ -1,0 +1,28 @@
+{
+  "version": "0.1",
+  "name": "Minimal example",
+  "description": "The smallest valid agent file.",
+  "icon": "📝",
+  "createdAt": "2026-04-17T00:00:00.000Z",
+  "updatedAt": "2026-04-17T00:00:00.000Z",
+  "config": {
+    "proactive": false
+  },
+  "sections": [
+    {
+      "id": "s_notes",
+      "type": "notes",
+      "label": "Notes",
+      "order": 0,
+      "data": {
+        "blocks": [
+          { "id": "b_1", "content": "Hello from the agent." }
+        ]
+      }
+    }
+  ],
+  "memory": {
+    "observations": [],
+    "preferences": {}
+  }
+}

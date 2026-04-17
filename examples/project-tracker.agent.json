@@ -1,0 +1,150 @@
+{
+  "version": "0.1",
+  "name": "Q2 launch",
+  "description": "Cross-functional launch tracker for the Q2 product release.",
+  "icon": "🚀",
+  "createdAt": "2026-04-01T09:00:00.000Z",
+  "updatedAt": "2026-04-17T09:00:00.000Z",
+  "config": {
+    "proactive": true,
+    "customInstructions": "When I add a new risk to the log, create a mitigation task in the kanban. Summarize weekly movement on Fridays.",
+    "tasks": [
+      {
+        "id": "t_friday_summary",
+        "trigger": "weekly",
+        "day": "friday",
+        "prompt": "Summarize what moved this week in the kanban and timeline. Flag anything blocked.",
+        "label": "Friday summary"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "s_kanban",
+      "type": "kanban",
+      "label": "Workstreams",
+      "icon": "📋",
+      "order": 0,
+      "data": {
+        "columns": [
+          { "id": "c_todo", "name": "To Do", "category": "todo", "order": 0 },
+          { "id": "c_doing", "name": "In Progress", "category": "doing", "order": 1, "wipLimit": 3 },
+          { "id": "c_review", "name": "Review", "category": "review", "order": 2 },
+          { "id": "c_done", "name": "Done", "category": "done", "order": 3 }
+        ],
+        "items": [
+          {
+            "id": "i_plan",
+            "title": "Draft launch plan",
+            "description": "Two-page plan covering positioning, rollout, and success metrics.",
+            "type": "task",
+            "status": "c_doing",
+            "priority": "p1",
+            "assignee": "yuya",
+            "labelIds": ["l_planning"],
+            "blockedBy": [],
+            "dueDate": "2026-04-25",
+            "createdAt": "2026-04-01T09:00:00.000Z",
+            "updatedAt": "2026-04-17T09:00:00.000Z"
+          },
+          {
+            "id": "i_copy",
+            "title": "Landing page copy",
+            "type": "task",
+            "status": "c_todo",
+            "priority": "p2",
+            "labelIds": ["l_marketing"],
+            "blockedBy": ["i_plan"],
+            "createdAt": "2026-04-02T09:00:00.000Z",
+            "updatedAt": "2026-04-02T09:00:00.000Z"
+          }
+        ],
+        "labels": [
+          { "id": "l_planning", "name": "Planning", "color": "#4A90D9" },
+          { "id": "l_marketing", "name": "Marketing", "color": "#81BC00" }
+        ]
+      }
+    },
+    {
+      "id": "s_timeline",
+      "type": "timeline",
+      "label": "Milestones",
+      "icon": "📅",
+      "order": 1,
+      "data": {
+        "items": [],
+        "milestones": [
+          {
+            "id": "m_rc",
+            "name": "Release candidate",
+            "description": "Feature-complete build ready for internal testing.",
+            "targetDate": "2026-05-20",
+            "status": "open"
+          },
+          {
+            "id": "m_launch",
+            "name": "Public launch",
+            "targetDate": "2026-06-03",
+            "status": "open"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_metrics",
+      "type": "metrics",
+      "label": "Key metrics",
+      "icon": "📊",
+      "order": 2,
+      "data": {
+        "cards": [
+          { "id": "k_signups", "label": "Waitlist signups", "value": 842, "trend": "up" },
+          { "id": "k_blockers", "label": "Open blockers", "value": 3, "trend": "flat" },
+          { "id": "k_days", "label": "Days to launch", "value": 47, "unit": "d" }
+        ]
+      }
+    },
+    {
+      "id": "s_log",
+      "type": "log",
+      "label": "Risks & decisions",
+      "icon": "⚠️",
+      "order": 3,
+      "data": {
+        "entries": [
+          {
+            "id": "e_1",
+            "type": "risk",
+            "title": "Marketing sign-off routinely slips",
+            "description": "Historical pattern from past three launches.",
+            "severity": "high",
+            "status": "open",
+            "owner": "yuya",
+            "createdAt": "2026-04-05T09:00:00.000Z"
+          },
+          {
+            "id": "e_2",
+            "type": "decision",
+            "title": "Ship with English-only UI for launch",
+            "context": "Localization would add 2 weeks.",
+            "decision": "English only at launch; localize 2 weeks post-launch.",
+            "alternatives": ["Delay launch by 2 weeks", "Launch in en + ja simultaneously"],
+            "status": "closed",
+            "createdAt": "2026-04-10T09:00:00.000Z"
+          }
+        ]
+      }
+    }
+  ],
+  "memory": {
+    "observations": [
+      "The user prefers weekly summaries on Fridays.",
+      "Marketing sign-off is historically the slowest step — worth surfacing early.",
+      "User's timezone is Asia/Tokyo; schedule daily tasks for morning there."
+    ],
+    "preferences": {
+      "timezone": "Asia/Tokyo",
+      "dateFormat": "YYYY-MM-DD"
+    }
+  }
+}
