@@ -1,6 +1,6 @@
 # @agent-format/viewer
 
-Standalone web viewer for [`.agent.json`](https://github.com/yuyamorita/agent-format) files. Drag-drop, paste, or share via URL — no install for end users.
+Standalone web viewer for [`.agent`](https://github.com/knorq-ai/agent-format) files. Drag-drop, paste, or share via URL — no install for end users.
 
 > Status: **Draft v0.1**. Intended as a universal fallback renderer; MCP Apps integration is a separate surface.
 
@@ -8,10 +8,10 @@ Standalone web viewer for [`.agent.json`](https://github.com/yuyamorita/agent-fo
 
 | Source | How |
 |---|---|
-| Drag-drop | Drop a `.agent.json` file onto the page |
+| Drag-drop | Drop a `.agent` file onto the page |
 | File picker | Click the drop zone |
 | Paste | Paste JSON into the textarea, click Render |
-| URL | `/?url=https://example.com/my.agent.json` |
+| URL | `/?url=https://example.com/my.agent` |
 | Hash | `/#{encodeURIComponent(jsonString)}` |
 
 ## Development

@@ -1,12 +1,12 @@
 {
   "name": "@agent-format/viewer",
   "version": "0.1.0",
-  "description": "Standalone web viewer for .agent.json files.",
+  "description": "Standalone web viewer for .agent files.",
   "license": "MIT",
   "author": "Yuya Morita",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yuyamorita/agent-format-viewer.git"
+    "url": "https://github.com/knorq-ai/agent-format-viewer.git"
   },
   "type": "module",
   "scripts": {

@@ -111,14 +111,14 @@ export function App() {
         >
             <h1>Agent File Viewer</h1>
             <p className="lead">
-                Drop a <code>.agent.json</code> file, paste the JSON, or share a link like{' '}
+                Drop a <code>.agent</code> file, paste the JSON, or share a link like{' '}
                 <code>?url=https://…</code>.
             </p>
 
             <label className={`dropzone ${dragging ? 'dragging' : ''}`}>
                 <input
                     type="file"
-                    accept=".json,.agent,application/json"
+                    accept=".agent,.json,application/json"
                     style={{ display: 'none' }}
                     onChange={(e) => {
                         const file = e.target.files?.[0]
@@ -158,7 +158,7 @@ export function App() {
             <div className="helper">
                 Sharing options: <code>?url=&lt;url&gt;</code> fetches and renders a remote file.{' '}
                 <code>#&lt;encoded-json&gt;</code> renders inline data from the URL hash. See the{' '}
-                <a href="https://github.com/yuyamorita/agent-format">spec</a> for file format details.
+                <a href="https://github.com/knorq-ai/agent-format">spec</a> for file format details.
             </div>
         </div>
     )
