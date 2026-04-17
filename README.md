@@ -130,6 +130,7 @@ This repository includes the reference implementation as a monorepo:
 
 - **[`packages/renderer`](./packages/renderer)** — `@agent-format/renderer`, a React component library. Publishes to npm.
 - **[`packages/viewer`](./packages/viewer)** — a standalone web viewer that consumes the renderer. Deploys at the URL above.
+- **[`packages/mcp`](./packages/mcp)** — `@agent-format/mcp`, an [MCP Apps](https://github.com/modelcontextprotocol/ext-apps) server that renders `.agent` files **inline** in Claude Desktop / ChatGPT / Cursor / VS Code Copilot / Goose.
 - **[`packages/claude-plugin`](./packages/claude-plugin)** — a Claude Code skill that teaches Claude to write `.agent` files instead of HTML artifacts when asked to visualize or structure content.
 
 A full desktop integration exists in **[Tsuzuri](https://github.com/knorq-ai/tsuzuri)** (Tauri + web), which reads/writes `.agent` files with Claude Code integration.

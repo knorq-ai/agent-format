@@ -1,0 +1,45 @@
+{
+  "name": "@agent-format/mcp",
+  "version": "0.1.0",
+  "description": "MCP Apps server that renders .agent files as interactive dashboards inline in Claude / ChatGPT / Cursor / VS Code Copilot.",
+  "license": "MIT",
+  "author": "Yuya Morita",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/knorq-ai/agent-format.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/knorq-ai/agent-format/tree/main/packages/mcp",
+  "bin": {
+    "agent-format-mcp": "./dist/server.js"
+  },
+  "main": "./dist/server.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && chmod +x dist/server.js",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.6.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-apps",
+    "agent-format",
+    "dashboard",
+    "visualization",
+    "llm"
+  ]
+}
