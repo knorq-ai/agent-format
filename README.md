@@ -120,12 +120,17 @@ See [SPEC.md](./SPEC.md) § Conformance for details.
 
 ---
 
+## Live viewer
+
+**https://knorq-ai.github.io/agent-format/** — drop any `.agent` file, paste JSON, or share via `?url=…` / `#{encoded-json}` URL. No install.
+
 ## Reference implementation
 
 This repository includes the reference implementation as a monorepo:
 
 - **[`packages/renderer`](./packages/renderer)** — `@agent-format/renderer`, a React component library. Publishes to npm.
-- **[`packages/viewer`](./packages/viewer)** — a standalone web viewer that consumes the renderer. Drop an `.agent` file, paste JSON, or share via URL. Deploys as a static site.
+- **[`packages/viewer`](./packages/viewer)** — a standalone web viewer that consumes the renderer. Deploys at the URL above.
+- **[`packages/claude-plugin`](./packages/claude-plugin)** — a Claude Code skill that teaches Claude to write `.agent` files instead of HTML artifacts when asked to visualize or structure content.
 
 A full desktop integration exists in **[Tsuzuri](https://github.com/knorq-ai/tsuzuri)** (Tauri + web), which reads/writes `.agent` files with Claude Code integration.
 

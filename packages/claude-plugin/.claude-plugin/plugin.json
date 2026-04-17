@@ -1,0 +1,12 @@
+{
+  "name": "agent-format",
+  "version": "0.1.0",
+  "description": "Visualize content as .agent JSON artifacts instead of HTML — typed, editable, re-readable.",
+  "author": {
+    "name": "knorq-ai"
+  },
+  "homepage": "https://github.com/knorq-ai/agent-format",
+  "repository": "https://github.com/knorq-ai/agent-format",
+  "license": "MIT",
+  "keywords": ["agent", "agent-format", "visualization", "dashboard", "kanban", "mcp"]
+}
