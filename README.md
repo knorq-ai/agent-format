@@ -1,6 +1,6 @@
 # @agent-format/renderer
 
-React renderer for the [agent file format](https://github.com/yuyamorita/agent-format) (`.agent.json`).
+React renderer for the [agent file format](https://github.com/knorq-ai/agent-format) (`.agent`).
 
 > Status: **Draft v0.1** — API will change until v1.0.
 
@@ -15,13 +15,16 @@ Requires React 18+.
 ## Usage
 
 ```tsx
-import { AgentRenderer } from '@agent-format/renderer'
+import { AgentRenderer, type AgentFile } from '@agent-format/renderer'
 import '@agent-format/renderer/styles.css'
-import data from './my-project.agent.json'
 
-export default function Page() {
+export default function Page({ data }: { data: AgentFile }) {
     return <AgentRenderer data={data} />
 }
+
+// Loading the file (browser):
+// const res = await fetch('/my-project.agent')
+// const data = await res.json() as AgentFile
 ```
 
 ## Section support (v0.1)

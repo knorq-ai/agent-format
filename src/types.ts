@@ -1,5 +1,5 @@
 // Agent File Format types (v0.1)
-// Matches the public spec at https://github.com/yuyamorita/agent-format
+// Matches the public spec at https://github.com/knorq-ai/agent-format
 
 export type SectionType =
     | 'kanban'
