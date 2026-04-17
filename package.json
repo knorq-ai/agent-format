@@ -1,0 +1,16 @@
+{
+  "name": "agent-format-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent File Format — spec, schema, renderer, and viewer.",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @agent-format/renderer && npm run build -w @agent-format/viewer",
+    "dev": "npm run dev -w @agent-format/viewer",
+    "dev:renderer": "npm run dev -w @agent-format/renderer",
+    "typecheck": "npm run typecheck -w @agent-format/renderer && npm run typecheck -w @agent-format/viewer"
+  }
+}

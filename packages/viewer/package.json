@@ -6,7 +6,8 @@
   "author": "Yuya Morita",
   "repository": {
     "type": "git",
-    "url": "https://github.com/knorq-ai/agent-format-viewer.git"
+    "url": "https://github.com/knorq-ai/agent-format.git",
+    "directory": "packages/viewer"
   },
   "type": "module",
   "scripts": {
@@ -16,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@agent-format/renderer": "file:../agent-format-renderer",
+    "@agent-format/renderer": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

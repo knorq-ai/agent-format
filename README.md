@@ -3,6 +3,8 @@
 **A structured alternative to HTML for AI-generated visualizations — editable by the user, re-readable by the agent.**
 
 > Status: **Draft v0.1** — not yet stable. Expect breaking changes until v1.0.
+>
+> **Note:** Not related to [`dotagent`](https://github.com/johnlindquist/dotagent) by @johnlindquist — that tool unifies IDE rule files (CLAUDE.md / `.cursorrules` / etc.). This spec defines a typed JSON artifact format for agent-rendered dashboards.
 
 When you ask an AI to "turn this email into a kanban" or "visualize this PDF as a mindmap," today it writes hundreds of lines of HTML/CSS for something that should be a few dozen lines of data. The output is static, expensive to generate, and round-trip-lossy — drag a card and the agent can't re-read your edits.
 
@@ -120,9 +122,14 @@ See [SPEC.md](./SPEC.md) § Conformance for details.
 
 ## Reference implementation
 
-- **[Tsuzuri](https://github.com/knorq-ai/tsuzuri)** — desktop app (Tauri) and web, reads/writes `.agent` files with Claude Code integration. The renderers here are the reference implementation for v0.1.
+This repository includes the reference implementation as a monorepo:
 
-Want to add a renderer? See [CONTRIBUTING.md](./CONTRIBUTING.md).
+- **[`packages/renderer`](./packages/renderer)** — `@agent-format/renderer`, a React component library. Publishes to npm.
+- **[`packages/viewer`](./packages/viewer)** — a standalone web viewer that consumes the renderer. Drop an `.agent` file, paste JSON, or share via URL. Deploys as a static site.
+
+A full desktop integration exists in **[Tsuzuri](https://github.com/knorq-ai/tsuzuri)** (Tauri + web), which reads/writes `.agent` files with Claude Code integration.
+
+Want to add a second renderer (Obsidian plugin, VS Code extension, MCP Apps server)? See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
