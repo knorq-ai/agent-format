@@ -1,0 +1,155 @@
+{
+  "version": "0.1",
+  "name": "北田家 相続関係説明図",
+  "description": "3-generation inheritance case with 家督相続 (pre-1947) and 代襲 implications. Synthetic sample derived from 東京都北区 公開見本 (public-domain koseki specimen).",
+  "icon": "👨‍👩‍👧",
+  "createdAt": "2026-04-19T00:00:00.000Z",
+  "updatedAt": "2026-04-19T00:00:00.000Z",
+  "config": {
+    "proactive": false
+  },
+  "sections": [
+    {
+      "id": "sec-1",
+      "type": "inheritance-diagram",
+      "label": "相続関係説明図（北田 宗太郎 被相続人）",
+      "icon": "⚖️",
+      "order": 0,
+      "data": {
+        "variant": "jp-court",
+        "focusedPersonId": "p1",
+        "persons": [
+          {
+            "id": "p1",
+            "name": "北田 宗太郎",
+            "role": "被相続人（前戸主）",
+            "address": "北豊島郡王子町下十條230番地（当時）",
+            "deathDate": "大正4年1月5日"
+          },
+          {
+            "id": "p2",
+            "name": "北田 美代",
+            "role": "配偶者"
+          },
+          {
+            "id": "p3",
+            "name": "北田 幸太",
+            "role": "長男（家督相続人）",
+            "birthday": "明治43年1月1日",
+            "address": "東京都北区王子本町一丁目15番地"
+          },
+          {
+            "id": "p4",
+            "name": "北田 由紀（旧姓 佐藤）",
+            "role": "幸太の妻",
+            "birthday": "大正10年2月1日",
+            "address": "東京都北区王子本町一丁目15番地",
+            "aliases": ["佐藤 由紀"]
+          },
+          {
+            "id": "p5",
+            "name": "北田 鈴",
+            "role": "二女（改製により除籍）",
+            "birthday": "明治15年9月16日"
+          },
+          {
+            "id": "p6",
+            "name": "北田 一郎",
+            "role": "孫（長男）",
+            "birthday": "昭和18年9月10日",
+            "address": "東京都北区王子本町一丁目15番地"
+          },
+          {
+            "id": "p7",
+            "name": "北田 二郎",
+            "role": "孫（二男・婚姻により除籍）",
+            "birthday": "昭和19年8月8日",
+            "address": "東京都北区王子本町一丁目15番地"
+          },
+          {
+            "id": "p8",
+            "name": "赤羽 由美子",
+            "role": "二郎の妻",
+            "birthday": "昭和17年9月20日",
+            "address": "東京都北区赤羽一丁目1番地（従前戸籍）"
+          }
+        ],
+        "relationships": [
+          {
+            "type": "spouse",
+            "person1Id": "p1",
+            "person2Id": "p2",
+            "details": "宗太郎と美代の婚姻（推定）"
+          },
+          {
+            "type": "spouse",
+            "person1Id": "p3",
+            "person2Id": "p4",
+            "details": "昭和17年2月29日 婚姻届出同日入籍"
+          },
+          {
+            "type": "spouse",
+            "person1Id": "p7",
+            "person2Id": "p8",
+            "details": "昭和34年11月7日 婚姻、東京都北区王子本町一丁目15番地に新戸籍編製により除籍"
+          },
+          {
+            "type": "parent-child",
+            "person1Id": "p1",
+            "person2Id": "p3",
+            "details": "長男（大正4年1月5日前戸主死亡により家督相続）"
+          },
+          {
+            "type": "parent-child",
+            "person1Id": "p2",
+            "person2Id": "p3",
+            "details": "長男"
+          },
+          {
+            "type": "parent-child",
+            "person1Id": "p1",
+            "person2Id": "p5",
+            "details": "二女"
+          },
+          {
+            "type": "parent-child",
+            "person1Id": "p2",
+            "person2Id": "p5",
+            "details": "二女"
+          },
+          {
+            "type": "parent-child",
+            "person1Id": "p3",
+            "person2Id": "p6",
+            "details": "長男"
+          },
+          {
+            "type": "parent-child",
+            "person1Id": "p4",
+            "person2Id": "p6",
+            "details": "長男"
+          },
+          {
+            "type": "parent-child",
+            "person1Id": "p3",
+            "person2Id": "p7",
+            "details": "二男"
+          },
+          {
+            "type": "parent-child",
+            "person1Id": "p4",
+            "person2Id": "p7",
+            "details": "二男"
+          }
+        ]
+      }
+    }
+  ],
+  "memory": {
+    "observations": [
+      "Sample derived from public-domain 東京都北区 koseki specimen (昭和32年改製原戸籍 見本).",
+      "Real cases would include death dates for all decedents; only 宗太郎 has one here (大正4年1月5日), marking him as 被相続人."
+    ],
+    "preferences": {}
+  }
+}

@@ -14,6 +14,7 @@ export type SectionType =
     | 'form'
     | 'links'
     | 'references'
+    | 'inheritance-diagram'
 
 export interface SectionBase {
     id: string
@@ -278,6 +279,38 @@ export interface ReferencesSection extends SectionBase {
     data: { items: ReferenceFileItem[] }
 }
 
+// --- Inheritance diagram (相続関係説明図) ---
+
+export interface InheritanceDiagramPerson {
+    id: string
+    name: string
+    role?: string // e.g. 被相続人, 配偶者, 長男, 代襲相続人
+    birthday?: string // localized free text (元号 or 西暦)
+    address?: string
+    deathDate?: string
+    aliases?: string[]
+}
+
+export interface InheritanceDiagramRelationship {
+    type: 'spouse' | 'parent-child'
+    person1Id: string // parent-child: parent; spouse: either
+    person2Id: string // parent-child: child; spouse: either
+    details?: string
+    dissolved?: boolean
+}
+
+export interface InheritanceDiagramData {
+    variant: string // 'jp-court' is the first-class conformance variant
+    persons: InheritanceDiagramPerson[]
+    relationships: InheritanceDiagramRelationship[]
+    focusedPersonId?: string
+}
+
+export interface InheritanceDiagramSection extends SectionBase {
+    type: 'inheritance-diagram'
+    data: InheritanceDiagramData
+}
+
 // --- Union ---
 
 export type Section =
@@ -293,6 +326,7 @@ export type Section =
     | FormSection
     | LinksSection
     | ReferencesSection
+    | InheritanceDiagramSection
 
 // --- Root ---
 

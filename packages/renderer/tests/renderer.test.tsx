@@ -91,6 +91,12 @@ describe('AgentRenderer — defensive guards', () => {
         { label: 'links with no items', section: { id: 'a', type: 'links', label: 'x', order: 0, data: {} } as any },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { label: 'references with no items', section: { id: 'a', type: 'references', label: 'x', order: 0, data: {} } as any },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        { label: 'inheritance-diagram with no persons', section: { id: 'a', type: 'inheritance-diagram', label: 'x', order: 0, data: { variant: 'jp-court', persons: [], relationships: [] } } as any },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        { label: 'inheritance-diagram with unknown variant', section: { id: 'a', type: 'inheritance-diagram', label: 'x', order: 0, data: { variant: 'martian-tribunal', persons: [{ id: 'p1', name: 'x' }], relationships: [] } } as any },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        { label: 'inheritance-diagram with only 1 person and no relationships', section: { id: 'a', type: 'inheritance-diagram', label: 'x', order: 0, data: { variant: 'jp-court', persons: [{ id: 'p1', name: '山田太郎', deathDate: '令和6年1月1日' }], relationships: [] } } as any },
     ]
 
     for (const { label, section } of cases) {
@@ -98,6 +104,59 @@ describe('AgentRenderer — defensive guards', () => {
             expect(() => render(<AgentRenderer data={makeAgent([section])} />)).not.toThrow()
         })
     }
+
+    it('inheritance-diagram survives a circular parent-child edge', () => {
+        // Adversarial: p1 → p2 → p1 (cycle). Must not hang or stack overflow.
+        const section: Section = {
+            id: 's',
+            type: 'inheritance-diagram',
+            label: 'cycle',
+            order: 0,
+            data: {
+                variant: 'jp-court',
+                persons: [
+                    { id: 'p1', name: 'A', deathDate: '令和6年1月1日' },
+                    { id: 'p2', name: 'B' },
+                ],
+                relationships: [
+                    { type: 'parent-child', person1Id: 'p1', person2Id: 'p2' },
+                    { type: 'parent-child', person1Id: 'p2', person2Id: 'p1' },
+                ],
+            },
+        }
+        expect(() => render(<AgentRenderer data={makeAgent([section])} />)).not.toThrow()
+    })
+
+    it('inheritance-diagram renders the jp-court example without error', () => {
+        // Sanity: a realistic 3-person case (decedent + spouse + child)
+        // renders and produces SVG output.
+        const section: Section = {
+            id: 's',
+            type: 'inheritance-diagram',
+            label: '相続関係説明図',
+            order: 0,
+            data: {
+                variant: 'jp-court',
+                persons: [
+                    { id: 'p1', name: '山田 太郎', role: '被相続人', deathDate: '令和5年12月31日', address: '東京都千代田区' },
+                    { id: 'p2', name: '山田 花子', role: '配偶者', birthday: '昭和30年3月15日' },
+                    { id: 'p3', name: '山田 次郎', role: '長男', birthday: '昭和58年7月1日' },
+                ],
+                relationships: [
+                    { type: 'spouse', person1Id: 'p1', person2Id: 'p2' },
+                    { type: 'parent-child', person1Id: 'p1', person2Id: 'p3' },
+                    { type: 'parent-child', person1Id: 'p2', person2Id: 'p3' },
+                ],
+            },
+        }
+        const { container } = render(<AgentRenderer data={makeAgent([section])} />)
+        const svg = container.querySelector('.af-inheritance-diagram svg')
+        expect(svg).not.toBeNull()
+        // Names should appear as SVG text
+        expect(container.textContent).toContain('山田 太郎')
+        expect(container.textContent).toContain('（被相続人）')
+        expect(container.textContent).toContain('（配偶者）')
+    })
 
     it('diagram caps recursion depth', () => {
         // Build a deeply nested tree (10_000 levels) that would overflow React's stack.

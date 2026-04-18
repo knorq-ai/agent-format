@@ -678,3 +678,49 @@
     max-height: 200px;
     overflow: auto;
 }
+
+/* Inheritance diagram (jp-court: 相続関係説明図).
+   Uses Japanese 明朝 font stack so legal documents render with the
+   convention expected by 法務省 / 裁判所. Print target is A3 landscape. */
+
+.af-inheritance-diagram {
+    background: #fff;
+    color: #000;
+    padding: 16px 24px;
+    overflow-x: auto;
+    font-family: 'Yu Mincho', 'Hiragino Mincho ProN', 'MS PMincho', serif;
+}
+
+.af-inheritance-diagram svg {
+    display: block;
+    min-width: 900px;
+    max-width: 100%;
+}
+
+.af-inheritance-diagram svg text {
+    font-family: 'Yu Mincho', 'Hiragino Mincho ProN', 'MS PMincho', serif;
+    fill: #000;
+}
+
+@media print {
+    @page {
+        size: A3 landscape;
+        margin: 15mm;
+    }
+    .af-inheritance-diagram {
+        padding: 0;
+    }
+}
+
+/* Dark-mode guard: keep the diagram readable by forcing a white canvas
+   even if the host viewer switches to a dark theme. Legal documents are
+   always black-on-white when submitted. */
+@media (prefers-color-scheme: dark) {
+    .af-inheritance-diagram {
+        background: #fff;
+        color: #000;
+    }
+    .af-inheritance-diagram svg text {
+        fill: #000;
+    }
+}

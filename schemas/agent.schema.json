@@ -88,7 +88,7 @@
           "enum": [
             "kanban", "checklist", "notes", "timeline", "table",
             "log", "metrics", "diagram", "report", "form",
-            "links", "references"
+            "links", "references", "inheritance-diagram"
           ]
         },
         "label": { "type": "string" },
@@ -110,7 +110,8 @@
         { "$ref": "#/$defs/ReportSection" },
         { "$ref": "#/$defs/FormSection" },
         { "$ref": "#/$defs/LinksSection" },
-        { "$ref": "#/$defs/ReferencesSection" }
+        { "$ref": "#/$defs/ReferencesSection" },
+        { "$ref": "#/$defs/InheritanceDiagramSection" }
       ]
     },
 
@@ -600,6 +601,82 @@
                       "memo": { "type": "string" }
                     }
                   }
+                }
+              }
+            }
+          },
+          "required": ["data"]
+        }
+      ]
+    },
+
+    "InheritanceDiagramPerson": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "description": "被相続人 / 配偶者 / 長男 / 代襲相続人 等" },
+        "birthday": { "type": "string", "description": "Localized date text (元号 or 西暦)." },
+        "address": { "type": "string" },
+        "deathDate": { "type": "string" },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Alternate scripts / 旧字体 variants of the same person's name."
+        }
+      }
+    },
+
+    "InheritanceDiagramRelationship": {
+      "type": "object",
+      "required": ["type", "person1Id", "person2Id"],
+      "properties": {
+        "type": { "enum": ["spouse", "parent-child"] },
+        "person1Id": {
+          "type": "string",
+          "description": "For parent-child this is the parent; for spouse either is acceptable."
+        },
+        "person2Id": {
+          "type": "string",
+          "description": "For parent-child this is the child."
+        },
+        "details": {
+          "type": "string",
+          "description": "Free text: 婚姻日, 養子, 家督相続, 代襲, 長男 etc."
+        },
+        "dissolved": {
+          "type": "boolean",
+          "description": "Divorce, 離縁, 縁組解消. Renderers MAY show this edge differently."
+        }
+      }
+    },
+
+    "InheritanceDiagramSection": {
+      "allOf": [
+        { "$ref": "#/$defs/SectionBase" },
+        {
+          "properties": {
+            "type": { "const": "inheritance-diagram" },
+            "data": {
+              "type": "object",
+              "required": ["variant", "persons", "relationships"],
+              "properties": {
+                "variant": {
+                  "type": "string",
+                  "description": "Jurisdictional rendering convention. 'jp-court' = 相続関係説明図 (Japanese family court / registration bureau)."
+                },
+                "persons": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/InheritanceDiagramPerson" }
+                },
+                "relationships": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/InheritanceDiagramRelationship" }
+                },
+                "focusedPersonId": {
+                  "type": "string",
+                  "description": "ID of the decedent (被相続人). Drives layout origin. If omitted, renderer picks the first person with deathDate set, else persons[0]."
                 }
               }
             }

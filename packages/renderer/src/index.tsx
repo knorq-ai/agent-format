@@ -11,6 +11,7 @@ import { ReportSectionView } from './sections/ReportSection'
 import { FormSectionView } from './sections/FormSection'
 import { LinksSectionView } from './sections/LinksSection'
 import { ReferencesSectionView } from './sections/ReferencesSection'
+import { InheritanceDiagramSectionView } from './sections/InheritanceDiagramSection'
 import { FallbackSectionView } from './sections/Fallback'
 
 export * from './types'
@@ -75,6 +76,8 @@ function SectionRenderer({ section }: { section: Section }) {
             return <LinksSectionView section={section} />
         case 'references':
             return <ReferencesSectionView section={section} />
+        case 'inheritance-diagram':
+            return <InheritanceDiagramSectionView section={section} />
         default:
             return <FallbackSectionView section={section} />
     }
