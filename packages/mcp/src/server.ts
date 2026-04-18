@@ -15,13 +15,12 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const VIEWER_ORIGIN = 'https://knorq-ai.github.io'
 const UI_URI = 'ui://agent-format/render.html'
 
-// The UI client bundle is produced by `node build-ui.mjs` during build —
-// it wires up the official @modelcontextprotocol/ext-apps client for the
-// handshake and subscribes to tool-results.
+// Produced by `node build-ui.mjs` — bundles ext-apps client + React +
+// @agent-format/renderer into a single IIFE, plus the renderer's CSS.
 const UI_CLIENT_JS = fsSync.readFileSync(path.join(__dirname, 'ui-client.js'), 'utf8')
+const UI_STYLES_CSS = fsSync.readFileSync(path.join(__dirname, 'ui-styles.css'), 'utf8')
 
 const RENDER_HTML = `<!doctype html>
 <html lang="en">
@@ -29,22 +28,19 @@ const RENDER_HTML = `<!doctype html>
 <meta charset="utf-8" />
 <title>Agent renderer</title>
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; background: #fff; color: #1a1a1a; }
-  iframe { width: 100%; height: 100vh; border: 0; display: block; }
-  .empty {
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  #viewer { display: none; }
+  #empty {
     display: flex; align-items: center; justify-content: center;
-    height: 100vh; font: 14px -apple-system, system-ui, "Segoe UI", sans-serif;
-    color: #6b7280; padding: 24px; text-align: center;
-  }
-  @media (prefers-color-scheme: dark) {
-    html, body { background: #0f1115; color: #e5e7eb; }
-    .empty { color: #9ca3af; }
+    min-height: 200px; font: 14px -apple-system, system-ui, "Segoe UI", sans-serif;
+    color: var(--af-fg-muted, #6b7280); padding: 24px; text-align: center;
   }
 </style>
+<style>${UI_STYLES_CSS}</style>
 </head>
 <body>
-<div id="empty" class="empty">Waiting for data…</div>
-<iframe id="viewer" style="display:none"></iframe>
+<div id="empty">Waiting for data…</div>
+<div id="viewer"></div>
 <script>${UI_CLIENT_JS}</script>
 </body>
 </html>`
@@ -144,12 +140,9 @@ registerAppResource(
                 text: RENDER_HTML,
                 _meta: {
                     ui: {
-                        csp: {
-                            frameDomains: [VIEWER_ORIGIN],
-                            resourceDomains: [],
-                            connectDomains: [],
-                            baseUriDomains: [],
-                        },
+                        // Everything (React, renderer, CSS) is inlined into
+                        // the HTML — no external fetches, no nested iframes.
+                        // Default CSP is sufficient.
                         prefersBorder: false,
                     },
                 },
