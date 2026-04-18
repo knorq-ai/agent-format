@@ -1,7 +1,6 @@
 {
   "version": "0.1",
   "name": "北田家 相続関係説明図",
-  "description": "3-generation inheritance case with 家督相続 (pre-1947) and 代襲 implications. Synthetic sample derived from 東京都北区 公開見本 (public-domain koseki specimen).",
   "icon": "👨‍👩‍👧",
   "createdAt": "2026-04-19T00:00:00.000Z",
   "updatedAt": "2026-04-19T00:00:00.000Z",
