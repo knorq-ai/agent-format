@@ -5,7 +5,11 @@
 import { App } from '@modelcontextprotocol/ext-apps'
 import { StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { AgentRenderer, type AgentFile } from '@agent-format/renderer'
+import {
+    AgentRenderer,
+    type AgentFile,
+    type HostBridge,
+} from '@agent-format/renderer'
 
 let root: Root | null = null
 
@@ -27,6 +31,39 @@ function showEmpty(text: string) {
     if (mount) mount.style.display = 'none'
 }
 
+const app = new App({ name: 'agent-format-renderer', version: '0.1.3' })
+
+// Bridge from renderer's generic HostBridge interface to the MCP Apps SDK.
+// The sandbox blocks window.open() and anchor downloads directly; the app
+// API routes these through the host (Claude Desktop / Cursor / etc.) which
+// prompts the user and opens a real browser tab / saves a real file.
+const hostBridge: HostBridge = {
+    openLink: async (url: string) => {
+        const { isError } = await app.openLink({ url })
+        return !isError
+    },
+    downloadFile: async ({ mimeType, text, blobBase64, filename }) => {
+        // Prefer text when provided (HTML/JSON/CSV). Use blob (base64) for
+        // binary payloads.
+        const resource: {
+            uri: string
+            mimeType: string
+            text?: string
+            blob?: string
+        } = {
+            uri: `file:///${filename}`,
+            mimeType,
+        }
+        if (typeof text === 'string') resource.text = text
+        else if (typeof blobBase64 === 'string') resource.blob = blobBase64
+        else return false
+        const { isError } = await app.downloadFile({
+            contents: [{ type: 'resource', resource }],
+        })
+        return !isError
+    },
+}
+
 function render(data: unknown) {
     if (
         !data ||
@@ -44,15 +81,16 @@ function render(data: unknown) {
 
         ensureRoot().render(
             <StrictMode>
-                <AgentRenderer data={data as AgentFile} />
+                <AgentRenderer
+                    data={data as AgentFile}
+                    host={hostBridge}
+                />
             </StrictMode>
         )
     } catch (e) {
         showEmpty('Failed to render: ' + String(e))
     }
 }
-
-const app = new App({ name: 'agent-format-renderer', version: '0.1.3' })
 
 // Must be set BEFORE connect() so the initial tool-result isn't missed.
 app.ontoolresult = (result: {

@@ -1,11 +1,15 @@
+import { useEffect, useRef } from 'react'
 import type { ReactElement } from 'react'
 import type {
     InheritanceDiagramSection,
     InheritanceDiagramPerson,
 } from '../types'
+import { downloadPrintableHtml } from '../actions'
+import { useHost } from '../index'
 
 interface Props {
     section: InheritanceDiagramSection
+    setHeaderActions?: (node: ReactElement | null) => void
 }
 
 // Cap traversal depth so a pathological or adversarial graph (e.g. LLM
@@ -40,11 +44,58 @@ type ChildGroupResult = {
     endY: number
 }
 
-export function InheritanceDiagramSectionView({ section }: Props) {
+export function InheritanceDiagramSectionView({ section, setHeaderActions }: Props) {
     const data = section.data
     const persons = data?.persons ?? []
     const rels = data?.relationships ?? []
     const variant = data?.variant ?? 'jp-court'
+
+    const svgRef = useRef<SVGSVGElement | null>(null)
+    const host = useHost()
+
+    // Expose a PDF download button to the section header. Only render it
+    // once the svg is mounted and we can reliably serialize the DOM.
+    useEffect(() => {
+        if (!setHeaderActions) return
+        if (!svgRef.current) return
+        if (persons.length === 0 || variant !== 'jp-court') {
+            setHeaderActions(null)
+            return
+        }
+        const sectionLabel = section.label || '相続関係説明図'
+        const documentTitle = sectionLabel
+        const headerTitle = '相 続 関 係 説 明 図'
+        const onClick = () => {
+            const svgEl = svgRef.current
+            if (!svgEl) return
+            // Serialize the live SVG including React-computed attributes.
+            const serialized = new XMLSerializer().serializeToString(svgEl)
+            const today = new Date().toISOString().slice(0, 10)
+            // Fire-and-forget; downloadPrintableHtml routes through the
+            // MCP Apps host when available (sandbox-safe) or falls back
+            // to an anchor download.
+            void downloadPrintableHtml({
+                svgMarkup: serialized,
+                titleLabel: headerTitle,
+                documentTitle,
+                filename: `inheritance-diagram-${today}.html`,
+                host,
+            })
+        }
+        setHeaderActions(
+            <button
+                type="button"
+                className="af-action-btn"
+                onClick={onClick}
+                title="印刷・PDF 保存用の HTML をダウンロード（開いて ⌘P で PDF 保存、裁判所提出用 A3 横書式）"
+            >
+                <span aria-hidden>⬇</span>
+                <span>PDF</span>
+            </button>
+        )
+        return () => setHeaderActions(null)
+        // Re-install when section identity changes.
+    }, [setHeaderActions, section.id, section.label, persons.length, variant, host])
 
     if (persons.length === 0) {
         return <p className="af-empty">No persons in diagram.</p>
@@ -460,6 +511,7 @@ export function InheritanceDiagramSectionView({ section }: Props) {
     return (
         <div className="af-inheritance-diagram">
             <svg
+                ref={svgRef}
                 xmlns="http://www.w3.org/2000/svg"
                 width="100%"
                 viewBox={`0 0 1400 ${svgH}`}

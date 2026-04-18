@@ -35,8 +35,23 @@
 }
 
 .af-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
     padding: 24px 24px 16px;
     border-bottom: 1px solid var(--af-border);
+}
+
+.af-header-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.af-header-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .af-title {
@@ -51,6 +66,39 @@
 .af-description {
     color: var(--af-fg-muted);
     margin: 0;
+}
+
+/* Header / section-level action buttons (Open in browser, PDF, etc.) */
+.af-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--af-bg);
+    color: var(--af-fg);
+    border: 1px solid var(--af-border);
+    border-radius: var(--af-radius);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    line-height: 1;
+    white-space: nowrap;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+
+.af-action-btn:hover {
+    background: var(--af-bg-alt);
+    border-color: var(--af-fg-muted);
+}
+
+.af-action-btn:focus-visible {
+    outline: 2px solid var(--af-accent, #2251ff);
+    outline-offset: 2px;
+}
+
+.af-action-btn:active {
+    transform: translateY(0.5px);
 }
 
 .af-sections {
@@ -70,11 +118,26 @@
 .af-section-header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     padding: 12px 16px;
     background: var(--af-bg-alt);
     border-bottom: 1px solid var(--af-border);
     font-weight: 600;
+}
+
+.af-section-header-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.af-section-header-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .af-section-body {

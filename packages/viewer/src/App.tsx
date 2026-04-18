@@ -182,7 +182,7 @@ export function App() {
                     </div>
                 </div>
                 <RenderErrorBoundary>
-                    <AgentRenderer data={state.data} />
+                    <AgentRenderer data={state.data} showOpenInViewer={false} />
                 </RenderErrorBoundary>
             </div>
         )
