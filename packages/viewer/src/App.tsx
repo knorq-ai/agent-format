@@ -1,5 +1,34 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { AgentRenderer, type AgentFile } from '@agent-format/renderer'
+
+// Catches any runtime error in AgentRenderer (malformed section data, etc.)
+// and renders a message instead of blanking the whole viewer.
+class RenderErrorBoundary extends Component<
+    { children: ReactNode },
+    { error: Error | null }
+> {
+    state = { error: null as Error | null }
+    static getDerivedStateFromError(error: Error) {
+        return { error }
+    }
+    componentDidCatch(error: Error) {
+        console.error('AgentRenderer crashed:', error)
+    }
+    render() {
+        if (this.state.error) {
+            return (
+                <div className="error" style={{ margin: 24 }}>
+                    Failed to render this .agent file: {this.state.error.message}. The file may be
+                    malformed or use fields outside the v0.1 spec.
+                </div>
+            )
+        }
+        return this.props.children
+    }
+}
+
+const MAX_REMOTE_BYTES = 5 * 1024 * 1024
+const REMOTE_FETCH_TIMEOUT_MS = 15_000
 
 type LoadState =
     | { kind: 'empty' }
@@ -27,13 +56,71 @@ export function App() {
     const loadFromUrl = useCallback(
         async (url: string) => {
             setState({ kind: 'loading' })
+            let parsed: URL
             try {
-                const res = await fetch(url)
+                parsed = new URL(url)
+            } catch {
+                setState({ kind: 'error', message: `Invalid URL: ${url}` })
+                return
+            }
+            if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+                setState({
+                    kind: 'error',
+                    message: `Only http(s) URLs are allowed; got ${parsed.protocol}`,
+                })
+                return
+            }
+
+            const controller = new AbortController()
+            const timer = window.setTimeout(() => controller.abort(), REMOTE_FETCH_TIMEOUT_MS)
+            try {
+                const res = await fetch(parsed.href, {
+                    signal: controller.signal,
+                    credentials: 'omit',
+                    redirect: 'follow',
+                })
                 if (!res.ok) throw new Error(`Fetch failed: ${res.status} ${res.statusText}`)
-                const text = await res.text()
-                loadFromJson(text)
+                const declaredLen = Number(res.headers.get('content-length') ?? 0)
+                if (declaredLen > MAX_REMOTE_BYTES) {
+                    throw new Error(
+                        `Remote file is ${declaredLen} bytes; the limit is ${MAX_REMOTE_BYTES}.`
+                    )
+                }
+                // Stream the body so we can enforce the byte cap even when the
+                // server omits Content-Length or uses chunked transfer encoding.
+                // Calling `res.text()` first would buffer the entire body before
+                // the length check, making the cap a lie against hostile peers.
+                const reader = res.body?.getReader()
+                if (!reader) throw new Error('Response has no body.')
+                const chunks: Uint8Array[] = []
+                let total = 0
+                while (true) {
+                    const { done, value } = await reader.read()
+                    if (done) break
+                    if (!value) continue
+                    total += value.byteLength
+                    if (total > MAX_REMOTE_BYTES) {
+                        controller.abort()
+                        throw new Error(
+                            `Remote file exceeds ${MAX_REMOTE_BYTES} bytes; aborted.`
+                        )
+                    }
+                    chunks.push(value)
+                }
+                const merged = new Uint8Array(total)
+                let offset = 0
+                for (const chunk of chunks) {
+                    merged.set(chunk, offset)
+                    offset += chunk.byteLength
+                }
+                loadFromJson(new TextDecoder('utf-8').decode(merged))
             } catch (err) {
-                setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) })
+                setState({
+                    kind: 'error',
+                    message: err instanceof Error ? err.message : String(err),
+                })
+            } finally {
+                window.clearTimeout(timer)
             }
         },
         [loadFromJson]
@@ -94,7 +181,9 @@ export function App() {
                         </button>
                     </div>
                 </div>
-                <AgentRenderer data={state.data} />
+                <RenderErrorBoundary>
+                    <AgentRenderer data={state.data} />
+                </RenderErrorBoundary>
             </div>
         )
     }

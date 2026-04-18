@@ -5,12 +5,13 @@ interface Props {
 }
 
 export function ReferencesSectionView({ section }: Props) {
-    if (section.data.items.length === 0) {
+    const items = section.data?.items ?? []
+    if (items.length === 0) {
         return <p className="af-empty">No referenced files.</p>
     }
     return (
         <ul className="af-references">
-            {section.data.items.map((item) => (
+            {items.map((item) => (
                 <li key={item.id} className="af-reference">
                     <div className="af-reference-main">
                         <span className="af-reference-name">{item.fileName}</span>

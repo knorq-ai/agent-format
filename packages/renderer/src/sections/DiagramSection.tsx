@@ -4,7 +4,23 @@ interface Props {
     section: DiagramSection
 }
 
+// Cap recursion so a pathologically deep tree (LLM hallucination, adversarial
+// input) can't blow React's call stack.
+const MAX_DIAGRAM_DEPTH = 50
+
 function Node({ node, depth }: { node: DiagramNode; depth: number }) {
+    if (depth > MAX_DIAGRAM_DEPTH) {
+        return (
+            <li className="af-diagram-node">
+                <div className="af-diagram-content">
+                    <span className="af-diagram-desc">
+                        … (tree truncated at depth {MAX_DIAGRAM_DEPTH})
+                    </span>
+                </div>
+            </li>
+        )
+    }
+    const children = node.children ?? []
     return (
         <li className="af-diagram-node" style={{ paddingLeft: depth === 0 ? 0 : 16 }}>
             <div className="af-diagram-content">
@@ -13,9 +29,9 @@ function Node({ node, depth }: { node: DiagramNode; depth: number }) {
                     <span className="af-diagram-desc"> — {node.description}</span>
                 )}
             </div>
-            {node.children.length > 0 && (
+            {children.length > 0 && (
                 <ul className="af-diagram-children">
-                    {node.children.map((child) => (
+                    {children.map((child) => (
                         <Node key={child.id} node={child} depth={depth + 1} />
                     ))}
                 </ul>
@@ -25,9 +41,11 @@ function Node({ node, depth }: { node: DiagramNode; depth: number }) {
 }
 
 export function DiagramSectionView({ section }: Props) {
+    const root = section.data?.root
+    if (!root) return <p className="af-empty">No diagram.</p>
     return (
         <ul className="af-diagram">
-            <Node node={section.data.root} depth={0} />
+            <Node node={root} depth={0} />
         </ul>
     )
 }

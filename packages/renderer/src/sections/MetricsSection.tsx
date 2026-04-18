@@ -5,9 +5,11 @@ interface Props {
 }
 
 export function MetricsSectionView({ section }: Props) {
+    const cards = section.data?.cards ?? []
+    if (cards.length === 0) return <p className="af-empty">No metric cards.</p>
     return (
         <div className="af-metrics">
-            {section.data.cards.map((card) => {
+            {cards.map((card) => {
                 const trendChar = card.trend === 'up' ? '↑' : card.trend === 'down' ? '↓' : card.trend === 'flat' ? '→' : ''
                 const trendClass = card.trend ? `af-metric-trend af-metric-trend--${card.trend}` : 'af-metric-trend'
                 return (

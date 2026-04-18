@@ -38,7 +38,9 @@ function FieldPreview({ field }: { field: FormField }) {
 }
 
 export function FormSectionView({ section }: Props) {
-    const { fields, submissions } = section.data
+    const fields = section.data?.fields ?? []
+    const submissions = section.data?.submissions ?? []
+    if (fields.length === 0) return <p className="af-empty">No form fields defined.</p>
     return (
         <div className="af-form">
             <form className="af-form-fields" onSubmit={(e) => e.preventDefault()}>

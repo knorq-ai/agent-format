@@ -5,9 +5,13 @@ interface Props {
 }
 
 export function NotesSectionView({ section }: Props) {
+    const blocks = section.data?.blocks ?? []
+    if (blocks.length === 0) {
+        return <p className="af-empty">No notes.</p>
+    }
     return (
         <div>
-            {section.data.blocks.map((block) => (
+            {blocks.map((block) => (
                 <div key={block.id} className="af-notes-block">
                     {block.content}
                 </div>

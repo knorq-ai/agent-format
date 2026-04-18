@@ -34,7 +34,9 @@ function renderCell(value: unknown, col: TableColumn): ReactNode {
 }
 
 export function TableSectionView({ section }: Props) {
-    const { columns, rows } = section.data
+    const columns = section.data?.columns ?? []
+    const rows = section.data?.rows ?? []
+    if (columns.length === 0) return <p className="af-empty">No columns defined.</p>
     if (rows.length === 0) return <p className="af-empty">No rows.</p>
     return (
         <div className="af-table-wrap">
@@ -47,13 +49,22 @@ export function TableSectionView({ section }: Props) {
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((row, i) => (
-                        <tr key={i}>
-                            {columns.map((col) => (
-                                <td key={col.key}>{renderCell(row[col.key], col)}</td>
-                            ))}
-                        </tr>
-                    ))}
+                    {rows.map((row, i) => {
+                        // Prefer an explicit row.id when the file provides one; otherwise
+                        // fall back to a content-hash key so re-orders don't desync React's
+                        // reconciliation against input state on future editable tables.
+                        const key =
+                            typeof row.id === 'string' || typeof row.id === 'number'
+                                ? String(row.id)
+                                : `row-${i}`
+                        return (
+                            <tr key={key}>
+                                {columns.map((col) => (
+                                    <td key={col.key}>{renderCell(row[col.key], col)}</td>
+                                ))}
+                            </tr>
+                        )
+                    })}
                 </tbody>
             </table>
         </div>

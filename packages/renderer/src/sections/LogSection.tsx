@@ -5,9 +5,11 @@ interface Props {
 }
 
 export function LogSectionView({ section }: Props) {
+    const entries = section.data?.entries ?? []
+    if (entries.length === 0) return <p className="af-empty">No log entries.</p>
     return (
         <div>
-            {section.data.entries.map((entry) => {
+            {entries.map((entry) => {
                 const badgeClass =
                     entry.type === 'risk'
                         ? 'af-log-badge af-log-badge--risk'

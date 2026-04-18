@@ -8,12 +8,18 @@ import {
 } from '@modelcontextprotocol/ext-apps/server'
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
-import * as fs from 'node:fs/promises'
 import * as fsSync from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { isAgentLike, resolveAgentFile } from './resolve.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Single source of truth for name/version so serverInfo can't drift from the
+// published package. package.json is two levels up from dist/server.js.
+const pkg = JSON.parse(
+    fsSync.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')
+) as { name: string; version: string }
 
 const UI_URI = 'ui://agent-format/render.html'
 
@@ -46,8 +52,8 @@ const RENDER_HTML = `<!doctype html>
 </html>`
 
 const server = new McpServer({
-    name: '@agent-format/mcp',
-    version: '0.1.0',
+    name: pkg.name,
+    version: pkg.version,
 })
 
 registerAppTool(
@@ -68,21 +74,27 @@ registerAppTool(
         _meta: { ui: { resourceUri: UI_URI } },
     },
     async ({ path: filePath }): Promise<CallToolResult> => {
-        const resolved = path.resolve(filePath)
-        const text = await fs.readFile(resolved, 'utf8')
-        const data: unknown = JSON.parse(text)
-        const sectionCount =
-            data && typeof data === 'object' && 'sections' in data && Array.isArray((data as { sections: unknown[] }).sections)
-                ? (data as { sections: unknown[] }).sections.length
-                : 0
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `Loaded ${path.basename(resolved)} (${sectionCount} sections). Rendering inline.`,
-                },
-            ],
-            structuredContent: { data } as Record<string, unknown>,
+        try {
+            const result = await resolveAgentFile(filePath)
+            if (!result.ok) {
+                return {
+                    content: [{ type: 'text', text: result.message }],
+                    isError: true,
+                }
+            }
+            return {
+                content: [{ type: 'text', text: result.message }],
+                structuredContent: { data: result.data } as Record<string, unknown>,
+            }
+        } catch (err) {
+            // Log the raw error to stderr for the operator; return a generic
+            // message to the model so error-surface doesn't leak filesystem
+            // internals (e.g. symlink target paths in ENOENT strings).
+            console.error('render_agent_file error:', err)
+            return {
+                content: [{ type: 'text', text: `Failed to read .agent file.` }],
+                isError: true,
+            }
         }
     },
 )
@@ -107,17 +119,21 @@ registerAppTool(
         _meta: { ui: { resourceUri: UI_URI } },
     },
     async ({ data }): Promise<CallToolResult> => {
-        const name =
-            data && typeof data === 'object' && 'name' in data && typeof (data as { name: unknown }).name === 'string'
-                ? ((data as { name: string }).name)
-                : 'agent data'
-        const sectionCount =
-            data && typeof data === 'object' && 'sections' in data && Array.isArray((data as { sections: unknown[] }).sections)
-                ? (data as { sections: unknown[] }).sections.length
-                : 0
+        if (!isAgentLike(data)) {
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: 'The `data` argument is not a valid .agent document (missing or non-array `sections`).',
+                    },
+                ],
+                isError: true,
+            }
+        }
+        const name = typeof data.name === 'string' ? data.name : 'agent data'
         return {
             content: [
-                { type: 'text', text: `Rendering "${name}" (${sectionCount} sections) inline.` },
+                { type: 'text', text: `Rendering "${name}" (${data.sections.length} sections) inline.` },
             ],
             structuredContent: { data } as Record<string, unknown>,
         }
@@ -130,7 +146,7 @@ registerAppResource(
     UI_URI,
     {
         description:
-            'Renders .agent data as an interactive dashboard by framing the knorq-ai.github.io viewer with the data passed via the tool-result message bridge.',
+            'Inline React renderer for .agent files. Receives the tool result via the ext-apps postMessage bridge and mounts <AgentRenderer/> against the supplied data.',
     },
     async (): Promise<ReadResourceResult> => ({
         contents: [

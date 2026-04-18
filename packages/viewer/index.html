@@ -3,6 +3,14 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <!--
+            Defense in depth against XSS/exfil if a renderer bug ever escapes
+            text escaping: only load scripts from our own origin; allow fetch
+            to any https host so ?url= remote loading still works; deny forms
+            entirely (we don't submit any).
+        -->
+        <meta http-equiv="Content-Security-Policy"
+              content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; img-src 'self' data:; font-src 'self' data:; base-uri 'self'; form-action 'none'; frame-ancestors 'none';" />
         <title>Agent File Viewer — render .agent files</title>
         <meta name="description" content="Drag-drop or share a URL to render .agent files — the typed JSON artifact format for AI-generated, user-editable visualizations." />
         <meta property="og:title" content="Agent File Viewer" />

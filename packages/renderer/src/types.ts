@@ -34,6 +34,13 @@ export interface KanbanColumn {
     isCollapsed?: boolean
 }
 
+export interface KanbanItemComment {
+    id: string
+    author: string
+    text: string
+    createdAt: string
+}
+
 export interface KanbanItem {
     id: string
     title: string
@@ -49,6 +56,7 @@ export interface KanbanItem {
     dueDate?: string
     milestoneId?: string
     cycleId?: string
+    comments?: KanbanItemComment[]
     createdAt: string
     updatedAt: string
 }
@@ -59,10 +67,17 @@ export interface KanbanLabel {
     color: string
 }
 
+export interface KanbanTeamMember {
+    id: string
+    name: string
+    role?: string
+}
+
 export interface KanbanData {
     columns: KanbanColumn[]
     items: KanbanItem[]
     labels: KanbanLabel[]
+    team?: KanbanTeamMember[]
 }
 
 export interface KanbanSection extends SectionBase {

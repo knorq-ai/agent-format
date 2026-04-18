@@ -8,9 +8,19 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @agent-format/renderer && npm run build -w @agent-format/viewer",
+    "build": "npm run build -w @agent-format/renderer && npm run build -w @agent-format/viewer && npm run build -w @agent-format/mcp",
     "dev": "npm run dev -w @agent-format/viewer",
     "dev:renderer": "npm run dev -w @agent-format/renderer",
-    "typecheck": "npm run typecheck -w @agent-format/renderer && npm run typecheck -w @agent-format/viewer"
+    "typecheck": "npm run typecheck -w @agent-format/renderer && npm run typecheck -w @agent-format/viewer && npm run typecheck -w @agent-format/mcp",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.0.0",
+    "@types/node": "^20.0.0",
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.0",
+    "happy-dom": "^15.0.0",
+    "vitest": "^2.0.0"
   }
 }

@@ -157,11 +157,12 @@ data: {
 
 ### 4.3 `notes`
 
-Ordered markdown blocks.
+Ordered text blocks.
 
 ```ts
 data: {
-  blocks: { id, content }[]   // content is CommonMark markdown
+  blocks: { id, content }[]   // plain text; newlines preserved on render.
+                              // v0.2 may introduce optional markdown parsing.
 }
 ```
 
@@ -247,14 +248,15 @@ data: {
 
 ### 4.9 `report`
 
-Repeating markdown reports with a shared template.
+Repeating text reports with a shared template.
 
 ```ts
 data: {
-  template: string,          // markdown heading structure
+  template: string,          // heading structure as plain text
   reports: {
     id, title,
-    content,                 // markdown body
+    content,                 // plain text body; newlines preserved on render.
+                             // v0.2 may introduce optional markdown parsing.
     createdAt, updatedAt
   }[]
 }

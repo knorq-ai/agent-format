@@ -5,7 +5,8 @@ interface Props {
 }
 
 export function TimelineSectionView({ section }: Props) {
-    const { items, milestones } = section.data
+    const items = section.data?.items ?? []
+    const milestones = section.data?.milestones ?? []
     const sortedMilestones = [...milestones].sort((a, b) =>
         (a.targetDate ?? '').localeCompare(b.targetDate ?? '')
     )
