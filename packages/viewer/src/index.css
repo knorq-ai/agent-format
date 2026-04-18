@@ -33,6 +33,9 @@ body {
 }
 
 .dropzone {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
     border: 2px dashed var(--af-border, #e5e7eb);
     border-radius: 8px;
     padding: 48px 24px;
