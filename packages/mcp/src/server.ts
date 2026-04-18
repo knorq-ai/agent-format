@@ -9,11 +9,19 @@ import {
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import * as fs from 'node:fs/promises'
+import * as fsSync from 'node:fs'
 import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const VIEWER_BASE = 'https://knorq-ai.github.io/agent-format/'
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 const VIEWER_ORIGIN = 'https://knorq-ai.github.io'
 const UI_URI = 'ui://agent-format/render.html'
+
+// The UI client bundle is produced by `node build-ui.mjs` during build —
+// it wires up the official @modelcontextprotocol/ext-apps client for the
+// handshake and subscribes to tool-results.
+const UI_CLIENT_JS = fsSync.readFileSync(path.join(__dirname, 'ui-client.js'), 'utf8')
 
 const RENDER_HTML = `<!doctype html>
 <html lang="en">
@@ -37,52 +45,7 @@ const RENDER_HTML = `<!doctype html>
 <body>
 <div id="empty" class="empty">Waiting for data…</div>
 <iframe id="viewer" style="display:none"></iframe>
-<script>
-(function () {
-  var viewerBase = ${JSON.stringify(VIEWER_BASE)};
-  var viewer = document.getElementById('viewer');
-  var empty = document.getElementById('empty');
-
-  function render(data) {
-    if (!data || typeof data !== 'object' || !Array.isArray(data.sections)) {
-      empty.textContent = 'No valid .agent data received.';
-      return;
-    }
-    try {
-      var hash = encodeURIComponent(JSON.stringify(data));
-      viewer.src = viewerBase + '#' + hash;
-      viewer.style.display = 'block';
-      empty.style.display = 'none';
-    } catch (e) {
-      empty.textContent = 'Failed to render: ' + String(e);
-    }
-  }
-
-  // MCP Apps initialize
-  try {
-    window.parent.postMessage({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'ui/initialize',
-      params: {
-        protocolVersion: '2026-01-26',
-        appCapabilities: { availableDisplayModes: ['inline', 'fullscreen'] },
-        clientInfo: { name: 'agent-format-renderer', version: '0.1.0' }
-      }
-    }, '*');
-  } catch (_) { /* non-MCP host; ignore */ }
-
-  window.addEventListener('message', function (e) {
-    var msg = e.data;
-    if (!msg || typeof msg !== 'object') return;
-    if (msg.method === 'ui/notifications/tool-result') {
-      var sc = msg.params && msg.params.structuredContent;
-      var data = sc && sc.data;
-      render(data);
-    }
-  });
-})();
-</script>
+<script>${UI_CLIENT_JS}</script>
 </body>
 </html>`
 

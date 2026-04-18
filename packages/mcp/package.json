@@ -1,6 +1,6 @@
 {
   "name": "@agent-format/mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP Apps server that renders .agent files as interactive dashboards inline in Claude / ChatGPT / Cursor / VS Code Copilot.",
   "license": "MIT",
   "author": "Yuya Morita",
@@ -21,7 +21,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && chmod +x dist/server.js",
+    "build": "tsc && node build-ui.mjs && chmod +x dist/server.js",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit"
   },
@@ -32,6 +32,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "esbuild": "^0.24.0",
     "typescript": "^5.4.0"
   },
   "keywords": [
