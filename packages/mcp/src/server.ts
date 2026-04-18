@@ -97,11 +97,16 @@ registerAppTool(
     {
         title: 'Render .agent file',
         description:
-            'Read an .agent file from disk and render it as an interactive dashboard (kanban / timeline / metrics / log / etc.) inline in the chat.',
+            'USE THIS TOOL whenever the user asks to render, view, show, display, open, or visualize an .agent file. ' +
+            'This is the ONLY way to produce an interactive visual dashboard from an .agent file — without this tool ' +
+            'the user will only see raw JSON text. The output renders inline in the chat with styled kanban boards, ' +
+            'timelines, metric cards, checklists, log entries, mind-map diagrams, and tables — whichever section ' +
+            'types the file contains. DO NOT use the built-in Read tool for .agent files; DO NOT generate an HTML ' +
+            'artifact. Call this tool with the absolute path and the UI will appear automatically.',
         inputSchema: {
             path: z.string().describe('Absolute path to the .agent file on the local filesystem.'),
         },
-        _meta: { ui: { resourceUri: UI_URI, visibility: ['model', 'app'] } },
+        _meta: { ui: { resourceUri: UI_URI } },
     },
     async ({ path: filePath }): Promise<CallToolResult> => {
         const resolved = path.resolve(filePath)
@@ -129,7 +134,10 @@ registerAppTool(
     {
         title: 'Render .agent inline',
         description:
-            'Render an .agent JSON object (passed as the `data` argument) as an interactive dashboard inline in the chat. Use when you generated the data this turn and want to show it without saving to disk.',
+            'USE THIS TOOL to display an .agent JSON object you generated this turn as an interactive visual dashboard ' +
+            'inline in the chat. Pass the full .agent document as the `data` argument. This is the ONLY way to render ' +
+            'generated .agent data visually — without this tool the user will only see raw JSON text. DO NOT generate ' +
+            'an HTML artifact or return the JSON in a code block; call this tool and the UI will appear.',
         inputSchema: {
             data: z
                 .unknown()
@@ -137,7 +145,7 @@ registerAppTool(
                     'The complete .agent document as a JSON object. Must match the v0.1 schema: { version, name, createdAt, updatedAt, config, sections[], memory }.',
                 ),
         },
-        _meta: { ui: { resourceUri: UI_URI, visibility: ['model', 'app'] } },
+        _meta: { ui: { resourceUri: UI_URI } },
     },
     async ({ data }): Promise<CallToolResult> => {
         const name =
