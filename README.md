@@ -124,13 +124,20 @@ See [SPEC.md](./SPEC.md) § Conformance for details.
 
 **https://knorq-ai.github.io/agent-format/** — drop any `.agent` file, paste JSON, or share via `?url=…` / `#{encoded-json}` URL. No install.
 
+## Packages on npm
+
+| Package | Install | Purpose |
+|---|---|---|
+| [`@agent-format/renderer`](https://www.npmjs.com/package/@agent-format/renderer) | `npm i @agent-format/renderer` | React component library that renders `.agent` data |
+| [`@agent-format/mcp`](https://www.npmjs.com/package/@agent-format/mcp) | `npx @agent-format/mcp` | [MCP Apps](https://github.com/modelcontextprotocol/ext-apps) server — renders `.agent` inline in Claude Desktop / ChatGPT / Cursor / VS Code Copilot / Goose |
+
 ## Reference implementation
 
 This repository includes the reference implementation as a monorepo:
 
-- **[`packages/renderer`](./packages/renderer)** — `@agent-format/renderer`, a React component library. Publishes to npm.
-- **[`packages/viewer`](./packages/viewer)** — a standalone web viewer that consumes the renderer. Deploys at the URL above.
-- **[`packages/mcp`](./packages/mcp)** — `@agent-format/mcp`, an [MCP Apps](https://github.com/modelcontextprotocol/ext-apps) server that renders `.agent` files **inline** in Claude Desktop / ChatGPT / Cursor / VS Code Copilot / Goose.
+- **[`packages/renderer`](./packages/renderer)** — the React component library published as [`@agent-format/renderer`](https://www.npmjs.com/package/@agent-format/renderer).
+- **[`packages/viewer`](./packages/viewer)** — the standalone web viewer deployed at the URL above.
+- **[`packages/mcp`](./packages/mcp)** — the MCP Apps server published as [`@agent-format/mcp`](https://www.npmjs.com/package/@agent-format/mcp).
 - **[`packages/claude-plugin`](./packages/claude-plugin)** — a Claude Code skill that teaches Claude to write `.agent` files instead of HTML artifacts when asked to visualize or structure content.
 
 A full desktop integration exists in **[Tsuzuri](https://github.com/knorq-ai/tsuzuri)** (Tauri + web), which reads/writes `.agent` files with Claude Code integration.

@@ -6,7 +6,7 @@
   "author": "Yuya Morita",
   "repository": {
     "type": "git",
-    "url": "https://github.com/knorq-ai/agent-format.git",
+    "url": "git+https://github.com/knorq-ai/agent-format.git",
     "directory": "packages/renderer"
   },
   "type": "module",

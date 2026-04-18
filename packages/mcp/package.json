@@ -7,12 +7,12 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/knorq-ai/agent-format.git",
+    "url": "git+https://github.com/knorq-ai/agent-format.git",
     "directory": "packages/mcp"
   },
   "homepage": "https://github.com/knorq-ai/agent-format/tree/main/packages/mcp",
   "bin": {
-    "agent-format-mcp": "./dist/server.js"
+    "agent-format-mcp": "dist/server.js"
   },
   "main": "./dist/server.js",
   "files": [
