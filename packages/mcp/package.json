@@ -1,6 +1,6 @@
 {
   "name": "@agent-format/mcp",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "MCP Apps server that renders .agent files as interactive dashboards inline in Claude / ChatGPT / Cursor / VS Code Copilot.",
   "license": "MIT",
   "author": "Yuya Morita",
