@@ -9,7 +9,16 @@ import {
     AgentRenderer,
     type AgentFile,
     type HostBridge,
+    type RendererPlugin,
 } from '@agent-format/renderer'
+import { jpCourtPlugin } from '@agent-format/jp-court'
+
+// Plugins we bundle into the MCP UI. Today: jp-court only, so `family-graph`
+// sections with `variant: "jp-court"` get the 相続関係説明図 visual
+// automatically inside Claude Desktop / Cursor / VS Code Copilot — no
+// per-host setup required. Declared at module scope so React gets a stable
+// reference across re-renders.
+const BUNDLED_PLUGINS: ReadonlyArray<RendererPlugin> = [jpCourtPlugin]
 
 let root: Root | null = null
 
@@ -84,6 +93,7 @@ function render(data: unknown) {
                 <AgentRenderer
                     data={data as AgentFile}
                     host={hostBridge}
+                    plugins={BUNDLED_PLUGINS}
                 />
             </StrictMode>
         )
