@@ -1,5 +1,12 @@
 import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { AgentRenderer, type AgentFile } from '@agent-format/renderer'
+import { jpCourtPlugin } from '@agent-format/jp-court'
+
+// Plugins registered in the deployed viewer. Registering jp-court here so
+// `family-graph` sections with `variant: "jp-court"` get the Japanese-legal
+// visual template out of the box. This is declared once at module scope so
+// React never sees a new array identity on re-render.
+const VIEWER_PLUGINS = [jpCourtPlugin]
 
 // Catches any runtime error in AgentRenderer (malformed section data, etc.)
 // and renders a message instead of blanking the whole viewer.
@@ -182,7 +189,11 @@ export function App() {
                     </div>
                 </div>
                 <RenderErrorBoundary>
-                    <AgentRenderer data={state.data} showOpenInViewer={false} />
+                    <AgentRenderer
+                        data={state.data}
+                        plugins={VIEWER_PLUGINS}
+                        showOpenInViewer={false}
+                    />
                 </RenderErrorBoundary>
             </div>
         )
