@@ -754,8 +754,21 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
 
     const svgH = Math.max(baseBottomY, otherEndY) + 30
 
+    // The jp-court template is a legal print artifact — always black-on-white
+    // per court-filing convention. Force the panel's own theme here so a
+    // dark-mode viewer doesn't leak a black background behind our black-ink
+    // text. Matches what the PDF export produces.
     return (
-        <div className="af-family-graph af-family-graph--jp-court" style={{ overflow: 'auto' }}>
+        <div
+            className="af-family-graph af-family-graph--jp-court"
+            style={{
+                overflow: 'auto',
+                background: '#fff',
+                color: '#000',
+                padding: 24,
+                borderRadius: 6,
+            }}
+        >
             <svg
                 ref={svgRef}
                 xmlns="http://www.w3.org/2000/svg"
