@@ -120,7 +120,9 @@ Every section conforms to `SectionBase` plus a type-specific `data` payload:
 }
 ```
 
-`SectionType` is one of: `kanban`, `checklist`, `notes`, `timeline`, `table`, `log`, `metrics`, `diagram`, `report`, `form`, `links`, `references`.
+`SectionType` is one of: `kanban`, `checklist`, `notes`, `timeline`, `table`, `log`, `metrics`, `diagram`, `report`, `form`, `links`, `references`, `family-graph`.
+
+**Rendering fidelity (normative):** A conforming renderer MUST render every item in `data` as authored. It MUST NOT filter, hide, omit, deduplicate, or algorithmically derive which items belong in the output. Section-specific style variants (e.g. `family-graph.variant = "jp-court"`) change visual presentation only; they do not change the set of rendered entities. If a producer wants a narrower output, it MUST author the file with only the intended entities — not rely on render-time filtering.
 
 ### 4.1 `kanban`
 
@@ -292,7 +294,31 @@ data: {
 }
 ```
 
-### 4.12 `references`
+### 4.12 `family-graph`
+
+Generic family tree / genealogy graph. Persons + their relationships (parent-child, spouse). The default rendering is a generation-based layout; named style variants (e.g. `jp-court` for the Japanese 相続関係説明図 court-filing template) may be provided by renderer plugins — these change visual style but, per § 4 Rendering fidelity, MUST NOT filter persons.
+
+```ts
+data: {
+  variant?: string,                  // e.g. 'jp-court' when a plugin is registered
+  focusedPersonId?: string,          // renderer highlights this person if present
+  persons: {
+    id, name,
+    role?,                           // free text; renderers may use as label
+    birthday?, deathDate?, address?,
+    aliases?: string[]
+  }[],
+  relationships: {
+    type: 'spouse' | 'parent-child',
+    person1Id, person2Id,            // parent-child: p1 = parent, p2 = child
+    details?, dissolved?
+  }[]
+}
+```
+
+Renderers MUST handle cycles in `parent-child` gracefully (depth cap + visited set). Plugins for jurisdiction-specific court-filing formats (e.g. `jp-court`) are not part of the core spec and ship as separate packages.
+
+### 4.13 `references`
 
 Local file references (path + optional note).
 
@@ -307,45 +333,7 @@ data: {
 
 Paths are relative to the agent file's parent directory when possible. Absolute paths are permitted; renderers SHOULD handle both.
 
-### 4.13 `inheritance-diagram`
-
-Graph of persons connected by spouse and parent-child edges, rendered with jurisdictional conventions for inheritance/probate diagrams. Unlike `diagram`, the data is a graph (not a tree), edges are typed, and the renderer applies layout rules specific to the chosen `variant`.
-
-```ts
-data: {
-  variant: "jp-court" | string,
-  persons: {
-    id, name,
-    role?,                  // 被相続人 / 配偶者 / 長男 / 代襲相続人 等
-    birthday?,              // localized free text (元号 or 西暦)
-    address?,
-    deathDate?,
-    aliases?: string[]      // alternate scripts / 旧字体 variants
-  }[],
-  relationships: {
-    type: "spouse" | "parent-child",
-    person1Id, person2Id,   // parent-child: person1 = parent
-    details?,               // free text (婚姻日, 養子, 家督相続, 代襲, 長男 等)
-    dissolved?: boolean     // divorce / 離縁 / 縁組解消
-  }[],
-  focusedPersonId?          // ID of 被相続人. Drives layout origin.
-                            // If omitted: first person with deathDate, else persons[0].
-}
-```
-
-**Variants.** The `variant` field signals which jurisdictional convention a renderer should apply. v0.1 defines one variant; others MAY be added without breaking compatibility. Renderers that don't implement a variant SHOULD display a brief notice rather than attempting a generic fallback (an inaccurate inheritance diagram is worse than none — legal documents have court-specific compliance requirements).
-
-**`jp-court` variant** — 相続関係説明図, Japanese family court / registration bureau standard:
-
-- Decedent (被相続人) renders upper-left with role label `(被相続人)` above name
-- Spouse renders below the decedent, connected via a **vertical double line** (two parallel lines, ~4px apart) — this is the court-mandated indicator for marriage
-- Children render to the right, connected via a horizontal trunk leaving from the double-line midpoint (or from the decedent's name if no spouse), with a vertical branch to each child's name
-- Grandchildren render further right of each child, recursively
-- Each person's information block displays: `住所` (or `最後の住所` for decedent) → `出生` → `死亡` → `（role）` → name (larger, bold, letter-spaced)
-- Font: `'Yu Mincho', 'Hiragino Mincho ProN', 'MS PMincho', serif` (明朝体)
-- Print format: A3 landscape, 15mm margins, black-on-white (renderers SHOULD force white background even in dark mode — court submissions are always black-on-white)
-
-Renderers MUST cap recursion depth to defend against malformed inputs (circular `parent-child` edges, pathological nesting). The reference renderer caps at 6 generations and shows a truncation notice.
+> **Note on the deprecated `inheritance-diagram` section type.** Earlier drafts of the spec defined an `inheritance-diagram` section with a court-specific `jp-court` variant baked into the core renderer. That design conflated rendering with legal rule enforcement (it silently dropped ascendants to match 民法 887 heir filtering), which violated the rendering fidelity rule in § 4. The section was renamed to `family-graph` and the `jp-court` visual template moved to the separate [`@agent-format/jp-court`](https://www.npmjs.com/package/@agent-format/jp-court) plugin. Renderers SHOULD accept `inheritance-diagram` as a runtime alias for `family-graph`; writers MUST emit `family-graph` in new files.
 
 ---
 

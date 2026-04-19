@@ -2,7 +2,13 @@
 // type, so regressions in defensive guards or sanitizers fail fast.
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
-import { AgentRenderer, type AgentFile, type Section } from '../src'
+import {
+    AgentRenderer,
+    findVariantComponent,
+    type AgentFile,
+    type RendererPlugin,
+    type Section,
+} from '../src'
 
 function makeAgent(sections: Section[]): AgentFile {
     return {
@@ -64,8 +70,6 @@ describe('AgentRenderer — smoke', () => {
 
 describe('AgentRenderer — defensive guards', () => {
     // Malformed inputs we expect to survive without throwing.
-    // Spec § 6.2: "A conforming reader MUST not error on unknown optional fields."
-    // Our interpretation: also don't crash on missing required arrays from LLM slop.
     const cases: Array<{ label: string; section: Section }> = [
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { label: 'kanban with no columns', section: { id: 'a', type: 'kanban', label: 'x', order: 0, data: {} } as any },
@@ -92,11 +96,14 @@ describe('AgentRenderer — defensive guards', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { label: 'references with no items', section: { id: 'a', type: 'references', label: 'x', order: 0, data: {} } as any },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        { label: 'inheritance-diagram with no persons', section: { id: 'a', type: 'inheritance-diagram', label: 'x', order: 0, data: { variant: 'jp-court', persons: [], relationships: [] } } as any },
+        { label: 'family-graph with no persons', section: { id: 'a', type: 'family-graph', label: 'x', order: 0, data: { persons: [], relationships: [] } } as any },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        { label: 'inheritance-diagram with unknown variant', section: { id: 'a', type: 'inheritance-diagram', label: 'x', order: 0, data: { variant: 'martian-tribunal', persons: [{ id: 'p1', name: 'x' }], relationships: [] } } as any },
+        { label: 'family-graph with only 1 person and no relationships', section: { id: 'a', type: 'family-graph', label: 'x', order: 0, data: { persons: [{ id: 'p1', name: 'Alice' }], relationships: [] } } as any },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        { label: 'inheritance-diagram with only 1 person and no relationships', section: { id: 'a', type: 'inheritance-diagram', label: 'x', order: 0, data: { variant: 'jp-court', persons: [{ id: 'p1', name: '山田太郎', deathDate: '令和6年1月1日' }], relationships: [] } } as any },
+        { label: 'family-graph with unknown variant (falls back to default)', section: { id: 'a', type: 'family-graph', label: 'x', order: 0, data: { variant: 'martian-tribunal', persons: [{ id: 'p1', name: 'x' }], relationships: [] } } as any },
+        // Deprecated-alias section type still renders
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        { label: 'inheritance-diagram alias still renders', section: { id: 'a', type: 'inheritance-diagram', label: 'x', order: 0, data: { persons: [{ id: 'p1', name: '山田太郎', deathDate: '令和6年1月1日' }], relationships: [] } } as any },
     ]
 
     for (const { label, section } of cases) {
@@ -105,17 +112,16 @@ describe('AgentRenderer — defensive guards', () => {
         })
     }
 
-    it('inheritance-diagram survives a circular parent-child edge', () => {
+    it('family-graph survives a circular parent-child edge', () => {
         // Adversarial: p1 → p2 → p1 (cycle). Must not hang or stack overflow.
         const section: Section = {
             id: 's',
-            type: 'inheritance-diagram',
+            type: 'family-graph',
             label: 'cycle',
             order: 0,
             data: {
-                variant: 'jp-court',
                 persons: [
-                    { id: 'p1', name: 'A', deathDate: '令和6年1月1日' },
+                    { id: 'p1', name: 'A' },
                     { id: 'p2', name: 'B' },
                 ],
                 relationships: [
@@ -125,37 +131,6 @@ describe('AgentRenderer — defensive guards', () => {
             },
         }
         expect(() => render(<AgentRenderer data={makeAgent([section])} />)).not.toThrow()
-    })
-
-    it('inheritance-diagram renders the jp-court example without error', () => {
-        // Sanity: a realistic 3-person case (decedent + spouse + child)
-        // renders and produces SVG output.
-        const section: Section = {
-            id: 's',
-            type: 'inheritance-diagram',
-            label: '相続関係説明図',
-            order: 0,
-            data: {
-                variant: 'jp-court',
-                persons: [
-                    { id: 'p1', name: '山田 太郎', role: '被相続人', deathDate: '令和5年12月31日', address: '東京都千代田区' },
-                    { id: 'p2', name: '山田 花子', role: '配偶者', birthday: '昭和30年3月15日' },
-                    { id: 'p3', name: '山田 次郎', role: '長男', birthday: '昭和58年7月1日' },
-                ],
-                relationships: [
-                    { type: 'spouse', person1Id: 'p1', person2Id: 'p2' },
-                    { type: 'parent-child', person1Id: 'p1', person2Id: 'p3' },
-                    { type: 'parent-child', person1Id: 'p2', person2Id: 'p3' },
-                ],
-            },
-        }
-        const { container } = render(<AgentRenderer data={makeAgent([section])} />)
-        const svg = container.querySelector('.af-inheritance-diagram svg')
-        expect(svg).not.toBeNull()
-        // Names should appear as SVG text
-        expect(container.textContent).toContain('山田 太郎')
-        expect(container.textContent).toContain('（被相続人）')
-        expect(container.textContent).toContain('（配偶者）')
     })
 
     it('diagram caps recursion depth', () => {
@@ -173,6 +148,108 @@ describe('AgentRenderer — defensive guards', () => {
             data: { root: node },
         }
         expect(() => render(<AgentRenderer data={makeAgent([section])} />)).not.toThrow()
+    })
+})
+
+describe('AgentRenderer — family-graph rendering fidelity (spec § 4)', () => {
+    // Anti-regression for the bug that prompted this refactor: the old jp-court
+    // renderer traversed DOWN only from the decedent, silently dropping
+    // ascendants. The default family-graph renderer MUST render every person.
+    it('renders every person including ascendants (父方祖父 case)', () => {
+        const section: Section = {
+            id: 's',
+            type: 'family-graph',
+            label: '拡大家系図',
+            order: 0,
+            data: {
+                persons: [
+                    { id: 'grand', name: '祖父' },
+                    { id: 'father', name: '父' },
+                    { id: 'mother', name: '母' },
+                    { id: 'decedent', name: '被相続人', deathDate: '令和5年12月31日' },
+                    { id: 'spouse', name: '配偶者' },
+                    { id: 'child', name: '長男' },
+                ],
+                relationships: [
+                    { type: 'parent-child', person1Id: 'grand', person2Id: 'father' },
+                    { type: 'spouse', person1Id: 'father', person2Id: 'mother' },
+                    { type: 'parent-child', person1Id: 'father', person2Id: 'decedent' },
+                    { type: 'parent-child', person1Id: 'mother', person2Id: 'decedent' },
+                    { type: 'spouse', person1Id: 'decedent', person2Id: 'spouse' },
+                    { type: 'parent-child', person1Id: 'decedent', person2Id: 'child' },
+                ],
+            },
+        }
+        const { container } = render(<AgentRenderer data={makeAgent([section])} />)
+        // Every person's name MUST appear in the rendered output.
+        // (This is the exact regression the GitHub issue flagged.)
+        const txt = container.textContent || ''
+        expect(txt).toContain('祖父')
+        expect(txt).toContain('父')
+        expect(txt).toContain('母')
+        expect(txt).toContain('被相続人')
+        expect(txt).toContain('配偶者')
+        expect(txt).toContain('長男')
+    })
+})
+
+describe('AgentRenderer — plugin API', () => {
+    it('uses a plugin-registered variant component when variant matches', () => {
+        const PluginVariant = ({ section }: { section: Section }) => (
+            <div data-testid="plugin-mark">plugin-rendered: {section.label}</div>
+        )
+        const plugin: RendererPlugin = {
+            name: 'test-plugin',
+            variants: { 'family-graph': { custom: PluginVariant } },
+        }
+        const section: Section = {
+            id: 's',
+            type: 'family-graph',
+            label: 'Test',
+            order: 0,
+            data: {
+                variant: 'custom',
+                persons: [{ id: 'p1', name: 'Alice' }],
+                relationships: [],
+            },
+        }
+        const { getByTestId } = render(
+            <AgentRenderer data={makeAgent([section])} plugins={[plugin]} />
+        )
+        expect(getByTestId('plugin-mark').textContent).toContain('plugin-rendered: Test')
+    })
+
+    it('falls back to default genealogy when no plugin claims the variant', () => {
+        const section: Section = {
+            id: 's',
+            type: 'family-graph',
+            label: 'Test',
+            order: 0,
+            data: {
+                variant: 'unknown-variant',
+                persons: [
+                    { id: 'p1', name: 'Alice' },
+                    { id: 'p2', name: 'Bob' },
+                ],
+                relationships: [{ type: 'spouse', person1Id: 'p1', person2Id: 'p2' }],
+            },
+        }
+        const { container } = render(<AgentRenderer data={makeAgent([section])} />)
+        // Default family-graph renderer outputs .af-family-graph wrapping an SVG.
+        expect(container.querySelector('.af-family-graph svg')).not.toBeNull()
+        expect(container.textContent).toContain('Alice')
+        expect(container.textContent).toContain('Bob')
+    })
+
+    it('findVariantComponent returns undefined when nothing matches', () => {
+        const plugin: RendererPlugin = {
+            name: 'p',
+            variants: { 'family-graph': { 'jp-court': () => null } },
+        }
+        expect(findVariantComponent([plugin], 'family-graph', 'jp-court')).toBeDefined()
+        expect(findVariantComponent([plugin], 'family-graph', 'other')).toBeUndefined()
+        expect(findVariantComponent([plugin], 'kanban', 'jp-court')).toBeUndefined()
+        expect(findVariantComponent([], 'family-graph', 'jp-court')).toBeUndefined()
     })
 })
 

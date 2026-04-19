@@ -13,13 +13,16 @@ import { ReportSectionView } from './sections/ReportSection'
 import { FormSectionView } from './sections/FormSection'
 import { LinksSectionView } from './sections/LinksSection'
 import { ReferencesSectionView } from './sections/ReferencesSection'
-import { InheritanceDiagramSectionView } from './sections/InheritanceDiagramSection'
+import { FamilyGraphSectionView } from './sections/FamilyGraphSection'
 import { FallbackSectionView } from './sections/Fallback'
 import { openInViewer } from './actions'
 import type { HostBridge } from './host'
+import type { RendererPlugin } from './plugins'
 
 export * from './types'
 export type { HostBridge } from './host'
+export type { RendererPlugin, VariantRendererProps, VariantComponent } from './plugins'
+export { findVariantComponent } from './plugins'
 export {
     openInViewer,
     buildPrintableHtml,
@@ -27,9 +30,18 @@ export {
 } from './actions'
 
 const HostContext = createContext<HostBridge | undefined>(undefined)
+const PluginsContext = createContext<ReadonlyArray<RendererPlugin>>([])
 
 export function useHost(): HostBridge | undefined {
     return useContext(HostContext)
+}
+
+/**
+ * Returns the plugin list provided to the nearest AgentRenderer. Section
+ * renderers use this to look up variant-specific components.
+ */
+export function usePlugins(): ReadonlyArray<RendererPlugin> {
+    return useContext(PluginsContext)
 }
 
 interface AgentRendererProps {
@@ -47,6 +59,12 @@ interface AgentRendererProps {
      * the public viewer itself (avoids a self-referential button).
      */
     showOpenInViewer?: boolean
+    /**
+     * Optional domain-specific plugins (e.g. `@agent-format/jp-court`) that
+     * register variant renderers for section types like `family-graph`.
+     * Earlier plugins win on conflicting `(sectionType, variant)` pairs.
+     */
+    plugins?: ReadonlyArray<RendererPlugin>
 }
 
 export function AgentRenderer({
@@ -54,47 +72,50 @@ export function AgentRenderer({
     className,
     host,
     showOpenInViewer = true,
+    plugins = [],
 }: AgentRendererProps) {
     const sections = [...data.sections].sort((a, b) => a.order - b.order)
 
     return (
         <HostContext.Provider value={host}>
-            <div className={`af-root ${className ?? ''}`}>
-                <header className="af-header">
-                    <div className="af-header-main">
-                        <h1 className="af-title">
-                            {data.icon && <span>{data.icon}</span>}
-                            <span>{data.name}</span>
-                        </h1>
-                        {data.description && (
-                            <p className="af-description">{data.description}</p>
-                        )}
-                    </div>
-                    {showOpenInViewer && (
-                        <div className="af-header-actions">
-                            <button
-                                type="button"
-                                className="af-action-btn"
-                                onClick={() => {
-                                    // Fire-and-forget; ignore host denial — user
-                                    // will notice if the page didn't open and
-                                    // can retry.
-                                    void openInViewer(data, host)
-                                }}
-                                title="Open this file in the public agent-format viewer (new tab)"
-                            >
-                                <span aria-hidden>↗</span>
-                                <span>Open in browser</span>
-                            </button>
+            <PluginsContext.Provider value={plugins}>
+                <div className={`af-root ${className ?? ''}`}>
+                    <header className="af-header">
+                        <div className="af-header-main">
+                            <h1 className="af-title">
+                                {data.icon && <span>{data.icon}</span>}
+                                <span>{data.name}</span>
+                            </h1>
+                            {data.description && (
+                                <p className="af-description">{data.description}</p>
+                            )}
                         </div>
-                    )}
-                </header>
-                <div className="af-sections">
-                    {sections.map((section) => (
-                        <SectionFrame key={section.id} section={section} />
-                    ))}
+                        {showOpenInViewer && (
+                            <div className="af-header-actions">
+                                <button
+                                    type="button"
+                                    className="af-action-btn"
+                                    onClick={() => {
+                                        // Fire-and-forget; ignore host denial —
+                                        // user will notice if the page didn't
+                                        // open and can retry.
+                                        void openInViewer(data, host)
+                                    }}
+                                    title="Open this file in the public agent-format viewer (new tab)"
+                                >
+                                    <span aria-hidden>↗</span>
+                                    <span>Open in browser</span>
+                                </button>
+                            </div>
+                        )}
+                    </header>
+                    <div className="af-sections">
+                        {sections.map((section) => (
+                            <SectionFrame key={section.id} section={section} />
+                        ))}
+                    </div>
                 </div>
-            </div>
+            </PluginsContext.Provider>
         </HostContext.Provider>
     )
 }
@@ -157,9 +178,13 @@ function SectionRenderer({
             return <LinksSectionView section={section} />
         case 'references':
             return <ReferencesSectionView section={section} />
+        case 'family-graph':
+        // `inheritance-diagram` is a deprecated alias for `family-graph`;
+        // both route to the same component so existing files keep rendering.
+        // eslint-disable-next-line no-fallthrough
         case 'inheritance-diagram':
             return (
-                <InheritanceDiagramSectionView
+                <FamilyGraphSectionView
                     section={section}
                     setHeaderActions={setHeaderActions}
                 />

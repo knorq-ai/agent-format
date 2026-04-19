@@ -14,6 +14,9 @@ export type SectionType =
     | 'form'
     | 'links'
     | 'references'
+    | 'family-graph'
+    // Deprecated alias for 'family-graph'. Still accepted by the renderer
+    // so existing .agent files don't break; emit 'family-graph' in new files.
     | 'inheritance-diagram'
 
 export interface SectionBase {
@@ -279,19 +282,19 @@ export interface ReferencesSection extends SectionBase {
     data: { items: ReferenceFileItem[] }
 }
 
-// --- Inheritance diagram (相続関係説明図) ---
+// --- Family graph (generic family tree / genealogy) ---
 
-export interface InheritanceDiagramPerson {
+export interface FamilyGraphPerson {
     id: string
     name: string
-    role?: string // e.g. 被相続人, 配偶者, 長男, 代襲相続人
-    birthday?: string // localized free text (元号 or 西暦)
+    role?: string // free text, renderer-dependent (e.g. 被相続人 / grandparent / 代襲相続人)
+    birthday?: string // free text (any calendar / format)
     address?: string
     deathDate?: string
     aliases?: string[]
 }
 
-export interface InheritanceDiagramRelationship {
+export interface FamilyGraphRelationship {
     type: 'spouse' | 'parent-child'
     person1Id: string // parent-child: parent; spouse: either
     person2Id: string // parent-child: child; spouse: either
@@ -299,16 +302,42 @@ export interface InheritanceDiagramRelationship {
     dissolved?: boolean
 }
 
-export interface InheritanceDiagramData {
-    variant: string // 'jp-court' is the first-class conformance variant
-    persons: InheritanceDiagramPerson[]
-    relationships: InheritanceDiagramRelationship[]
+export interface FamilyGraphData {
+    /**
+     * Optional style template. Core ships the default genealogy layout; known
+     * plugins can register additional variants (e.g. `jp-court` for the
+     * Japanese 相続関係説明図 template via `@agent-format/jp-court`). Unknown
+     * variants fall back to the default layout.
+     */
+    variant?: string
+    persons: FamilyGraphPerson[]
+    relationships: FamilyGraphRelationship[]
     focusedPersonId?: string
 }
 
+export interface FamilyGraphSection extends SectionBase {
+    type: 'family-graph'
+    data: FamilyGraphData
+}
+
+/**
+ * @deprecated Use `FamilyGraphPerson`. Kept as a re-export so existing
+ * consumers compile while they migrate.
+ */
+export type InheritanceDiagramPerson = FamilyGraphPerson
+/** @deprecated Use `FamilyGraphRelationship`. */
+export type InheritanceDiagramRelationship = FamilyGraphRelationship
+/** @deprecated Use `FamilyGraphData`. */
+export type InheritanceDiagramData = FamilyGraphData
+
+/**
+ * @deprecated Use `FamilyGraphSection` with `type: 'family-graph'`. The
+ * renderer still accepts the `inheritance-diagram` section type at runtime
+ * as a backward-compatible alias.
+ */
 export interface InheritanceDiagramSection extends SectionBase {
     type: 'inheritance-diagram'
-    data: InheritanceDiagramData
+    data: FamilyGraphData
 }
 
 // --- Union ---
@@ -326,6 +355,7 @@ export type Section =
     | FormSection
     | LinksSection
     | ReferencesSection
+    | FamilyGraphSection
     | InheritanceDiagramSection
 
 // --- Root ---

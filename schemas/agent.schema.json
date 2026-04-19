@@ -88,7 +88,8 @@
           "enum": [
             "kanban", "checklist", "notes", "timeline", "table",
             "log", "metrics", "diagram", "report", "form",
-            "links", "references", "inheritance-diagram"
+            "links", "references", "family-graph",
+            "inheritance-diagram"
           ]
         },
         "label": { "type": "string" },
@@ -111,7 +112,64 @@
         { "$ref": "#/$defs/FormSection" },
         { "$ref": "#/$defs/LinksSection" },
         { "$ref": "#/$defs/ReferencesSection" },
+        { "$ref": "#/$defs/FamilyGraphSection" },
         { "$ref": "#/$defs/InheritanceDiagramSection" }
+      ]
+    },
+
+    "FamilyGraphPerson": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "role": { "type": "string" },
+        "birthday": { "type": "string" },
+        "address": { "type": "string" },
+        "deathDate": { "type": "string" },
+        "aliases": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "FamilyGraphRelationship": {
+      "type": "object",
+      "required": ["type", "person1Id", "person2Id"],
+      "properties": {
+        "type": { "enum": ["spouse", "parent-child"] },
+        "person1Id": { "type": "string" },
+        "person2Id": { "type": "string" },
+        "details": { "type": "string" },
+        "dissolved": { "type": "boolean" }
+      }
+    },
+
+    "FamilyGraphData": {
+      "type": "object",
+      "required": ["persons", "relationships"],
+      "properties": {
+        "variant": { "type": "string" },
+        "focusedPersonId": { "type": "string" },
+        "persons": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/FamilyGraphPerson" }
+        },
+        "relationships": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/FamilyGraphRelationship" }
+        }
+      }
+    },
+
+    "FamilyGraphSection": {
+      "allOf": [
+        { "$ref": "#/$defs/SectionBase" },
+        {
+          "properties": {
+            "type": { "const": "family-graph" },
+            "data": { "$ref": "#/$defs/FamilyGraphData" }
+          },
+          "required": ["data"]
+        }
       ]
     },
 

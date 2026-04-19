@@ -1,15 +1,16 @@
 {
-  "name": "@agent-format/renderer",
-  "version": "0.1.5",
-  "description": "React renderer for the agent file format (.agent).",
+  "name": "@agent-format/jp-court",
+  "version": "0.1.0",
+  "description": "@agent-format/renderer plugin: jp-court (相続関係説明図) visual template for family-graph sections. Japanese legal-filing typography, double-line spouse edges, PDF export. Does NOT filter persons — the .agent file is the source of truth.",
   "license": "MIT",
   "author": "Yuya Morita",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/knorq-ai/agent-format.git",
-    "directory": "packages/renderer"
+    "directory": "packages/jp-court"
   },
-  "type": "module",
+  "homepage": "https://github.com/knorq-ai/agent-format/tree/main/packages/jp-court",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,8 +19,7 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./styles.css": "./dist/styles.css"
+    }
   },
   "files": [
     "dist",
@@ -27,15 +27,17 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup && cp src/styles.css dist/styles.css",
+    "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
+    "@agent-format/renderer": "^0.1.5",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"
   },
   "devDependencies": {
+    "@agent-format/renderer": "^0.1.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "react": "^19.0.0",
@@ -44,13 +46,11 @@
     "typescript": "^5.4.0"
   },
   "keywords": [
-    "agent",
     "agent-format",
-    "react",
-    "renderer",
-    "dashboard",
-    "kanban",
-    "mcp",
-    "llm"
+    "agent-format-plugin",
+    "family-graph",
+    "jp-court",
+    "相続関係説明図",
+    "inheritance"
   ]
 }

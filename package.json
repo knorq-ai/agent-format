@@ -8,10 +8,10 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @agent-format/renderer && npm run build -w @agent-format/viewer && npm run build -w @agent-format/mcp",
+    "build": "npm run build -w @agent-format/renderer && npm run build -w @agent-format/jp-court && npm run build -w @agent-format/viewer && npm run build -w @agent-format/mcp",
     "dev": "npm run dev -w @agent-format/viewer",
     "dev:renderer": "npm run dev -w @agent-format/renderer",
-    "typecheck": "npm run typecheck -w @agent-format/renderer && npm run typecheck -w @agent-format/viewer && npm run typecheck -w @agent-format/mcp",
+    "typecheck": "npm run typecheck -w @agent-format/renderer && npm run typecheck -w @agent-format/jp-court && npm run typecheck -w @agent-format/viewer && npm run typecheck -w @agent-format/mcp",
     "test": "vitest run",
     "test:watch": "vitest"
   },
