@@ -17,17 +17,34 @@ import { FamilyGraphSectionView } from './sections/FamilyGraphSection'
 import { FallbackSectionView } from './sections/Fallback'
 import { openInViewer } from './actions'
 import type { HostBridge } from './host'
-import type { RendererPlugin } from './plugins'
+import { findSectionComponent, type RendererPlugin } from './plugins'
 
 export * from './types'
 export type { HostBridge } from './host'
 export type { RendererPlugin, VariantRendererProps, VariantComponent } from './plugins'
-export { findVariantComponent } from './plugins'
+export { findVariantComponent, findSectionComponent } from './plugins'
 export {
     openInViewer,
     buildPrintableHtml,
     downloadPrintableHtml,
 } from './actions'
+export { sanitizeSvgForEmbed } from './sanitize'
+
+// Spec major version this renderer is built against. Documents whose
+// `version` major exceeds this are rendered with a warning banner; the
+// renderer still best-effort renders the sections it recognizes, per
+// spec § 3.1 ("reject unknown major versions OR degrade gracefully with
+// a warning").
+export const SPEC_MAJOR = 0
+
+function parseVersionMajor(v: unknown): number | null {
+    // Strict: require semver-ish `MAJOR.MINOR(.PATCH)?(-prerelease)?` with
+    // purely numeric MAJOR and no leading `v`. Anything else returns null,
+    // which the caller treats as "unknown but don't warn" (back-compat).
+    if (typeof v !== 'string') return null
+    const m = /^(\d+)\.\d+(?:\.\d+)?(?:-[A-Za-z0-9.-]+)?$/.exec(v)
+    return m ? Number(m[1]) : null
+}
 
 const HostContext = createContext<HostBridge | undefined>(undefined)
 const PluginsContext = createContext<ReadonlyArray<RendererPlugin>>([])
@@ -75,11 +92,32 @@ export function AgentRenderer({
     plugins = [],
 }: AgentRendererProps) {
     const sections = [...data.sections].sort((a, b) => a.order - b.order)
+    const docMajor = parseVersionMajor(data.version)
+    const unsupportedMajor = docMajor !== null && docMajor > SPEC_MAJOR
 
     return (
         <HostContext.Provider value={host}>
             <PluginsContext.Provider value={plugins}>
                 <div className={`af-root ${className ?? ''}`}>
+                    {unsupportedMajor && (
+                        <div
+                            className="af-version-warning"
+                            role="alert"
+                            style={{
+                                padding: '8px 12px',
+                                margin: '0 0 12px',
+                                border: '1px solid #d97706',
+                                background: '#fffbeb',
+                                color: '#78350f',
+                                borderRadius: 6,
+                                font: '13px -apple-system, system-ui, sans-serif',
+                            }}
+                        >
+                            Document declares spec version {String(data.version)};
+                            this renderer supports {SPEC_MAJOR}.x. Rendering with
+                            best-effort fallbacks — unknown fields may be ignored.
+                        </div>
+                    )}
                     <header className="af-header">
                         <div className="af-header-main">
                             <h1 className="af-title">
@@ -122,6 +160,8 @@ export function AgentRenderer({
 
 function SectionFrame({ section }: { section: Section }) {
     const [actions, setActions] = useState<ReactElement | null>(null)
+    const plugins = useContext(PluginsContext)
+    const PluginView = findSectionComponent(plugins, section.type)
     return (
         <section className="af-section">
             <header className="af-section-header">
@@ -134,7 +174,11 @@ function SectionFrame({ section }: { section: Section }) {
                 )}
             </header>
             <div className="af-section-body">
-                <SectionRenderer section={section} setHeaderActions={setActions} />
+                {PluginView ? (
+                    <PluginView section={section} setHeaderActions={setActions} />
+                ) : (
+                    <SectionRenderer section={section} setHeaderActions={setActions} />
+                )}
             </div>
         </section>
     )

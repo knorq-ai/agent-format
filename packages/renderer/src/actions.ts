@@ -8,6 +8,7 @@
 
 import type { AgentFile } from './types'
 import { type HostBridge, fallbackOpenLink, fallbackDownload } from './host'
+import { sanitizeSvgForEmbed } from './sanitize'
 
 // Public viewer endpoint for the `.agent` format. The `#<encoded-json>` hash
 // form is documented in packages/viewer/src/App.tsx and stable across
@@ -49,6 +50,7 @@ export function buildPrintableHtml({
 }): string {
     const safeTitle = escapeHtml(documentTitle)
     const safeLabel = escapeHtml(titleLabel)
+    const safeSvg = sanitizeSvgForEmbed(svgMarkup)
     const autoPrintScript = autoPrint
         ? `<script>window.addEventListener('load', () => setTimeout(() => window.print(), 250));</script>`
         : ''
@@ -74,7 +76,7 @@ export function buildPrintableHtml({
 </head><body>
 <div class="toolbar">⌘P で印刷 / PDF 保存</div>
 <h1 class="doc-title">${safeLabel}</h1>
-${svgMarkup}
+${safeSvg}
 ${autoPrintScript}
 </body></html>`
 }

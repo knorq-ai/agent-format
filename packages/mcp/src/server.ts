@@ -11,6 +11,19 @@ import { z } from 'zod'
 import * as fsSync from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
+// ajv and ajv-formats ship CJS defaults; NodeNext ESM resolution surfaces
+// them via `.default`. Use createRequire to reach the runtime constructor
+// without fighting the type system.
+import { createRequire } from 'node:module'
+const requireCjs = createRequire(import.meta.url)
+const Ajv2020: new (opts?: unknown) => {
+    compile: (schema: unknown) => ValidateFunction
+} = requireCjs('ajv/dist/2020').default
+const addFormats: (ajv: unknown) => void = requireCjs('ajv-formats').default
+interface ValidateFunction {
+    (data: unknown): boolean
+    errors?: { instancePath?: string; message?: string }[] | null
+}
 import { isAgentLike, resolveAgentFile } from './resolve.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -27,6 +40,28 @@ const UI_URI = 'ui://agent-format/render.html'
 // @agent-format/renderer into a single IIFE, plus the renderer's CSS.
 const UI_CLIENT_JS = fsSync.readFileSync(path.join(__dirname, 'ui-client.js'), 'utf8')
 const UI_STYLES_CSS = fsSync.readFileSync(path.join(__dirname, 'ui-styles.css'), 'utf8')
+
+// JSON Schema for full-document validation of inline payloads. Copied from
+// schemas/agent.schema.json at build time (see tsconfig `resolveJsonModule`).
+// We compile once at startup; validation is a hot path on every tool call.
+const agentSchema = JSON.parse(
+    fsSync.readFileSync(path.join(__dirname, 'agent.schema.json'), 'utf8')
+)
+// allErrors: true — so `summarizeAjvErrors` can pick the most informative
+// of several parallel failures (e.g. a single bad section triggers both a
+// `const` mismatch on `type` and a `oneOf` failure at the parent array).
+const ajv = new Ajv2020({ allErrors: true, strict: false })
+addFormats(ajv)
+const validateAgent = ajv.compile(agentSchema)
+
+function summarizeAjvErrors(errs: ValidateFunction['errors']): string {
+    if (!errs || errs.length === 0) return 'unknown validation failure'
+    // Return the first two errors only — full dumps are noisy for model consumption.
+    return errs
+        .slice(0, 2)
+        .map((e) => `${e.instancePath || '/'} ${e.message ?? 'invalid'}`)
+        .join('; ')
+}
 
 const RENDER_HTML = `<!doctype html>
 <html lang="en">
@@ -125,6 +160,20 @@ registerAppTool(
                     {
                         type: 'text',
                         text: 'The `data` argument is not a valid .agent document (missing or non-array `sections`).',
+                    },
+                ],
+                isError: true,
+            }
+        }
+        // Full JSON-Schema validation: reject malformed documents up front so
+        // the UI iframe never tries to render garbage. Keep the message short
+        // (first couple of errors) so models can self-correct without a flood.
+        if (!validateAgent(data)) {
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: `Invalid .agent document: ${summarizeAjvErrors(validateAgent.errors)}`,
                     },
                 ],
                 isError: true,

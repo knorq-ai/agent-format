@@ -40,7 +40,7 @@ function showEmpty(text: string) {
     if (mount) mount.style.display = 'none'
 }
 
-const app = new App({ name: 'agent-format-renderer', version: '0.1.3' })
+const app = new App({ name: 'agent-format-renderer', version: __APP_VERSION__ })
 
 // Bridge from renderer's generic HostBridge interface to the MCP Apps SDK.
 // The sandbox blocks window.open() and anchor downloads directly; the app
@@ -53,19 +53,16 @@ const hostBridge: HostBridge = {
     },
     downloadFile: async ({ mimeType, text, blobBase64, filename }) => {
         // Prefer text when provided (HTML/JSON/CSV). Use blob (base64) for
-        // binary payloads.
-        const resource: {
-            uri: string
-            mimeType: string
-            text?: string
-            blob?: string
-        } = {
-            uri: `file:///${filename}`,
-            mimeType,
-        }
-        if (typeof text === 'string') resource.text = text
-        else if (typeof blobBase64 === 'string') resource.blob = blobBase64
-        else return false
+        // binary payloads. The SDK types resource as a discriminated union
+        // so build each branch separately rather than mutating a shared object.
+        const uri = `file:///${filename}`
+        const resource =
+            typeof text === 'string'
+                ? { uri, mimeType, text }
+                : typeof blobBase64 === 'string'
+                    ? { uri, mimeType, blob: blobBase64 }
+                    : null
+        if (!resource) return false
         const { isError } = await app.downloadFile({
             contents: [{ type: 'resource', resource }],
         })

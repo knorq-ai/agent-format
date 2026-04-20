@@ -1,7 +1,6 @@
 # Agent File Format — Specification v0.1 (Draft)
 
 **Status:** Draft. Last updated 2026-04-17.
-**Editors:** This is a working draft extracted from the [Tsuzuri](https://github.com/knorq-ai/tsuzuri) reference implementation.
 
 ---
 
@@ -120,7 +119,15 @@ Every section conforms to `SectionBase` plus a type-specific `data` payload:
 }
 ```
 
-`SectionType` is one of: `kanban`, `checklist`, `notes`, `timeline`, `table`, `log`, `metrics`, `diagram`, `report`, `form`, `links`, `references`, `family-graph`.
+`SectionType` is one of the core types — `kanban`, `checklist`, `notes`, `timeline`, `table`, `log`, `metrics`, `diagram`, `report`, `form`, `links`, `references` — or a namespaced **extension type** of the form `x-<vendor>:<name>` (e.g. `x-agent-format:family-graph`; see § 7). Core renderers that don't understand an extension type MUST fall back to the "Unknown section" placeholder rather than erroring (§ 6.2).
+
+**Standard extensions bundled with the reference implementation:**
+
+| Type | Purpose | Pack |
+|---|---|---|
+| `family-graph` | Family tree / genealogy graph with optional jurisdiction-specific visual variants | `@agent-format/renderer` (default) + `@agent-format/jp-court` (jp-court variant plugin) |
+
+`family-graph` is accepted unprefixed for backward compatibility with v0.1 documents shipped before § 7 was formalized. Writers targeting v0.2+ SHOULD use the `x-agent-format:family-graph` form for forward-compatible extension registration.
 
 **Rendering fidelity (normative):** A conforming renderer MUST render every item in `data` as authored. It MUST NOT filter, hide, omit, deduplicate, or algorithmically derive which items belong in the output. Section-specific style variants (e.g. `family-graph.variant = "jp-court"`) change visual presentation only; they do not change the set of rendered entities. If a producer wants a narrower output, it MUST author the file with only the intended entities — not rely on render-time filtering.
 
@@ -380,9 +387,26 @@ A conforming reader SHOULD:
 
 ## 7. Extensions
 
-Writers MAY include top-level fields not defined in this spec, prefixed with `x-` (e.g. `x-tsuzuri-snapshot-id`). Readers MUST preserve `x-*` fields on round-trip.
+### 7.1 Top-level extension fields
 
-Custom section types are not yet standardized. v0.2 will formalize an extension mechanism. Until then, implementations MAY add section types but SHOULD document them and accept that interop is not guaranteed.
+Writers MAY include top-level fields not defined in this spec, prefixed with `x-` (e.g. `x-acme-snapshot-id`). Readers MUST preserve `x-*` fields on round-trip.
+
+### 7.2 Extension section types
+
+Custom section types MUST use a namespaced identifier of the form `x-<vendor>:<name>` where `<vendor>` is a stable, DNS-like vendor tag the author controls and `<name>` is a kebab-case section name. Examples: `x-agent-format:family-graph`, `x-acme:burndown-chart`.
+
+Requirements:
+
+1. Vendors MUST NOT reuse another vendor's tag. The prefix exists so two independent authors can ship extensions with the same `<name>` without collision.
+2. The `data` payload of an extension section has no schema constraint from the core spec. Writers SHOULD publish a schema at `<vendor>/agent-format/<name>.schema.json` and reference it from documentation.
+3. Readers that don't recognize an extension type MUST render the "Unknown section" placeholder per § 6.2. Readers MUST NOT error, MUST NOT drop, and MUST preserve the section on round-trip.
+4. Conflicts between renderer plugins for the same `(type, variant)` pair are broken by registration order — earlier plugins win.
+
+The core spec reserves the bare (unprefixed) section types listed in § 4 plus `family-graph` (grandfathered for v0.1 compatibility). All future core type additions will ship with a major-version bump so prefixed extensions remain forward-compatible.
+
+### 7.3 Renderer plugin API
+
+The reference TypeScript renderer exposes a `RendererPlugin` interface so extension packs can register a React component for a `(type, variant?)` pair without touching the core renderer. See `packages/renderer/src/plugins.ts` and the `@agent-format/jp-court` pack for a worked example.
 
 ---
 
@@ -394,12 +418,20 @@ Custom section types are not yet standardized. v0.2 will formalize an extension 
 
 ---
 
-## 9. Open questions (v0.2 candidates)
+## 9. Roadmap
 
-- **Extension mechanism** for custom section types (namespaced `type: "x-mytype"`?).
-- **Relations** between sections: e.g. a `log` entry referencing a `kanban` item by ID.
-- **Binary attachments**: should the format inline images or require external refs?
-- **Multi-agent files**: multiple `config` blocks in one file?
-- **Schema URL in document**: `$schema` field for tooling integration.
+### 9.1 Scheduled for v0.2
+
+- **Drop the unprefixed `family-graph` type from `SectionBase.type`.** Writers MUST already emit `family-graph` today (§ 4.12), but the core enum still accepts it alongside the namespaced form for v0.1 compat. v0.2 renderers SHOULD accept the bare form at runtime as a backward alias; schema validation will require `x-agent-format:family-graph`.
+- **Relations between sections**: e.g. a `log` entry referencing a `kanban` item by stable ID. Current workaround is ad-hoc ID coupling.
+- **Binary attachments**: choose between inlined base64 blobs and external refs with integrity hashes. Today the format has no normative answer.
+- **Multi-agent files**: multiple `config` blocks per document (currently 1:1).
+
+### 9.2 Resolved in v0.1 (historical)
+
+The following were v0.2 candidates in earlier drafts and are now settled:
+
+- ~~Extension mechanism for custom section types~~ → formalized in § 7.2 (`x-<vendor>:<name>`).
+- ~~`$schema` field for editor integration~~ → accepted at document root; see § 3.
 
 Feedback welcome via GitHub issues.

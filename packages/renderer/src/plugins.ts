@@ -34,6 +34,36 @@ export interface RendererPlugin {
      *   }
      */
     variants?: Partial<Record<SectionType | string, Record<string, VariantComponent>>>
+    /**
+     * Top-level renderers for namespaced extension section types
+     * (`x-<vendor>:<name>`, see spec § 7.2). Keys are section `type`
+     * strings; values are the component to mount. Example:
+     *
+     *   {
+     *     'x-acme:burndown-chart': BurndownChartView,
+     *   }
+     *
+     * Unlike `variants`, this claims ownership of the whole section type.
+     * Only matches when the incoming section's `type` equals the key
+     * literally; lookup is first-plugin-wins across the supplied list.
+     */
+    sections?: Record<string, VariantComponent>
+}
+
+/**
+ * Walk the supplied plugin list in order and return the first registered
+ * top-level renderer for an extension section type, or undefined if none
+ * claims it. Used by `AgentRenderer` to route `x-<vendor>:<name>` sections.
+ */
+export function findSectionComponent(
+    plugins: ReadonlyArray<RendererPlugin>,
+    sectionType: string
+): VariantComponent | undefined {
+    for (const plugin of plugins) {
+        const component = plugin.sections?.[sectionType]
+        if (component) return component
+    }
+    return undefined
 }
 
 /**

@@ -6,6 +6,10 @@
   "type": "object",
   "required": ["version", "name", "createdAt", "updatedAt", "config", "sections", "memory"],
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional schema URL for editor / validator integration."
+    },
     "version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+(\\.\\d+)?(-[A-Za-z0-9.]+)?$",
@@ -40,7 +44,8 @@
           "type": "array",
           "items": { "$ref": "#/$defs/AgentTask" }
         }
-      }
+      },
+      "additionalProperties": false
     },
 
     "AgentTask": {
@@ -56,6 +61,7 @@
         "lastRun": { "type": "string", "format": "date-time" },
         "label": { "type": "string" }
       },
+      "additionalProperties": false,
       "allOf": [
         {
           "if": { "properties": { "trigger": { "const": "weekly" } } },
@@ -76,7 +82,8 @@
           "type": "object",
           "additionalProperties": { "type": "string" }
         }
-      }
+      },
+      "additionalProperties": false
     },
 
     "SectionBase": {
@@ -85,17 +92,43 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "type": {
-          "enum": [
-            "kanban", "checklist", "notes", "timeline", "table",
-            "log", "metrics", "diagram", "report", "form",
-            "links", "references", "family-graph",
-            "inheritance-diagram"
+          "description": "Core section type (enum) or a namespaced extension type `x-<vendor>:<name>` per spec § 7.2.",
+          "anyOf": [
+            {
+              "enum": [
+                "kanban", "checklist", "notes", "timeline", "table",
+                "log", "metrics", "diagram", "report", "form",
+                "links", "references", "family-graph"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^x-[a-z0-9][a-z0-9-]*:[a-z][a-z0-9-]*$"
+            }
           ]
         },
         "label": { "type": "string" },
         "icon": { "type": "string" },
         "order": { "type": "number" }
       }
+    },
+
+    "ExtensionSection": {
+      "description": "Namespaced extension section type (`x-<vendor>:<name>`). Core schema does not constrain `data`; vendors publish their own schema.",
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/SectionBase" },
+        {
+          "properties": {
+            "type": {
+              "type": "string",
+              "pattern": "^x-[a-z0-9][a-z0-9-]*:[a-z][a-z0-9-]*$"
+            },
+            "data": {}
+          },
+          "required": ["data"]
+        }
+      ]
     },
 
     "Section": {
@@ -113,7 +146,7 @@
         { "$ref": "#/$defs/LinksSection" },
         { "$ref": "#/$defs/ReferencesSection" },
         { "$ref": "#/$defs/FamilyGraphSection" },
-        { "$ref": "#/$defs/InheritanceDiagramSection" }
+        { "$ref": "#/$defs/ExtensionSection" }
       ]
     },
 
@@ -128,7 +161,8 @@
         "address": { "type": "string" },
         "deathDate": { "type": "string" },
         "aliases": { "type": "array", "items": { "type": "string" } }
-      }
+      },
+      "additionalProperties": false
     },
 
     "FamilyGraphRelationship": {
@@ -140,7 +174,8 @@
         "person2Id": { "type": "string" },
         "details": { "type": "string" },
         "dissolved": { "type": "boolean" }
-      }
+      },
+      "additionalProperties": false
     },
 
     "FamilyGraphData": {
@@ -157,10 +192,12 @@
           "type": "array",
           "items": { "$ref": "#/$defs/FamilyGraphRelationship" }
         }
-      }
+      },
+      "additionalProperties": false
     },
 
     "FamilyGraphSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -174,6 +211,7 @@
     },
 
     "KanbanSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -182,12 +220,14 @@
             "data": {
               "type": "object",
               "required": ["columns", "items", "labels"],
+              "additionalProperties": false,
               "properties": {
                 "columns": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "name", "category", "order"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "name": { "type": "string" },
@@ -203,6 +243,7 @@
                   "items": {
                     "type": "object",
                     "required": ["id", "title", "type", "status", "priority", "labelIds", "blockedBy", "createdAt", "updatedAt"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "title": { "type": "string" },
@@ -223,6 +264,7 @@
                         "items": {
                           "type": "object",
                           "required": ["id", "author", "text", "createdAt"],
+                          "additionalProperties": false,
                           "properties": {
                             "id": { "type": "string" },
                             "author": { "type": "string" },
@@ -241,6 +283,7 @@
                   "items": {
                     "type": "object",
                     "required": ["id", "name", "color"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "name": { "type": "string" },
@@ -253,6 +296,7 @@
                   "items": {
                     "type": "object",
                     "required": ["id", "name"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "name": { "type": "string" },
@@ -269,6 +313,7 @@
     },
 
     "ChecklistSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -277,12 +322,14 @@
             "data": {
               "type": "object",
               "required": ["groups"],
+              "additionalProperties": false,
               "properties": {
                 "groups": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "title", "items"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "title": { "type": "string" },
@@ -291,6 +338,7 @@
                         "items": {
                           "type": "object",
                           "required": ["id", "text", "checked"],
+                          "additionalProperties": false,
                           "properties": {
                             "id": { "type": "string" },
                             "text": { "type": "string" },
@@ -310,6 +358,7 @@
     },
 
     "NotesSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -318,12 +367,14 @@
             "data": {
               "type": "object",
               "required": ["blocks"],
+              "additionalProperties": false,
               "properties": {
                 "blocks": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "content"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "content": { "type": "string" }
@@ -339,6 +390,7 @@
     },
 
     "TimelineSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -347,12 +399,14 @@
             "data": {
               "type": "object",
               "required": ["items", "milestones"],
+              "additionalProperties": false,
               "properties": {
                 "items": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "title", "status"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "title": { "type": "string" },
@@ -369,6 +423,7 @@
                   "items": {
                     "type": "object",
                     "required": ["id", "name", "status"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "name": { "type": "string" },
@@ -387,6 +442,7 @@
     },
 
     "TableSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -395,12 +451,14 @@
             "data": {
               "type": "object",
               "required": ["columns", "rows"],
+              "additionalProperties": false,
               "properties": {
                 "columns": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["key", "label", "type"],
+                    "additionalProperties": false,
                     "properties": {
                       "key": { "type": "string" },
                       "label": { "type": "string" },
@@ -410,6 +468,7 @@
                   }
                 },
                 "rows": {
+                  "description": "Row shape is column-driven; keys match `columns[].key`. Renderers tolerate extra keys.",
                   "type": "array",
                   "items": { "type": "object" }
                 }
@@ -422,6 +481,7 @@
     },
 
     "LogSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -430,12 +490,14 @@
             "data": {
               "type": "object",
               "required": ["entries"],
+              "additionalProperties": false,
               "properties": {
                 "entries": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "type", "title", "status", "createdAt"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "type": { "type": "string" },
@@ -460,6 +522,7 @@
     },
 
     "MetricsSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -468,12 +531,14 @@
             "data": {
               "type": "object",
               "required": ["cards"],
+              "additionalProperties": false,
               "properties": {
                 "cards": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "label", "value"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "label": { "type": "string" },
@@ -495,6 +560,7 @@
     "DiagramNode": {
       "type": "object",
       "required": ["id", "label", "children"],
+      "additionalProperties": false,
       "properties": {
         "id": { "type": "string" },
         "label": { "type": "string" },
@@ -507,6 +573,7 @@
     },
 
     "DiagramSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -515,6 +582,7 @@
             "data": {
               "type": "object",
               "required": ["root"],
+              "additionalProperties": false,
               "properties": {
                 "root": { "$ref": "#/$defs/DiagramNode" }
               }
@@ -526,6 +594,7 @@
     },
 
     "ReportSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -534,6 +603,7 @@
             "data": {
               "type": "object",
               "required": ["template", "reports"],
+              "additionalProperties": false,
               "properties": {
                 "template": { "type": "string" },
                 "reports": {
@@ -541,6 +611,7 @@
                   "items": {
                     "type": "object",
                     "required": ["id", "title", "content", "createdAt", "updatedAt"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "title": { "type": "string" },
@@ -559,6 +630,7 @@
     },
 
     "FormSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -567,12 +639,14 @@
             "data": {
               "type": "object",
               "required": ["fields", "submissions"],
+              "additionalProperties": false,
               "properties": {
                 "fields": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "label", "type"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "label": { "type": "string" },
@@ -588,9 +662,13 @@
                   "items": {
                     "type": "object",
                     "required": ["id", "values", "submittedAt"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
-                      "values": { "type": "object" },
+                      "values": {
+                        "description": "Field-id-keyed values; shape is field-driven.",
+                        "type": "object"
+                      },
                       "submittedAt": { "type": "string", "format": "date-time" },
                       "submittedBy": { "type": "string" }
                     }
@@ -605,6 +683,7 @@
     },
 
     "LinksSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -613,12 +692,14 @@
             "data": {
               "type": "object",
               "required": ["items"],
+              "additionalProperties": false,
               "properties": {
                 "items": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "title", "url"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "title": { "type": "string" },
@@ -637,6 +718,7 @@
     },
 
     "ReferencesSection": {
+      "unevaluatedProperties": false,
       "allOf": [
         { "$ref": "#/$defs/SectionBase" },
         {
@@ -645,12 +727,14 @@
             "data": {
               "type": "object",
               "required": ["items"],
+              "additionalProperties": false,
               "properties": {
                 "items": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "fileId", "fileName", "filePath"],
+                    "additionalProperties": false,
                     "properties": {
                       "id": { "type": "string" },
                       "fileId": { "type": "string" },
@@ -659,82 +743,6 @@
                       "memo": { "type": "string" }
                     }
                   }
-                }
-              }
-            }
-          },
-          "required": ["data"]
-        }
-      ]
-    },
-
-    "InheritanceDiagramPerson": {
-      "type": "object",
-      "required": ["id", "name"],
-      "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "name": { "type": "string", "minLength": 1 },
-        "role": { "type": "string", "description": "被相続人 / 配偶者 / 長男 / 代襲相続人 等" },
-        "birthday": { "type": "string", "description": "Localized date text (元号 or 西暦)." },
-        "address": { "type": "string" },
-        "deathDate": { "type": "string" },
-        "aliases": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Alternate scripts / 旧字体 variants of the same person's name."
-        }
-      }
-    },
-
-    "InheritanceDiagramRelationship": {
-      "type": "object",
-      "required": ["type", "person1Id", "person2Id"],
-      "properties": {
-        "type": { "enum": ["spouse", "parent-child"] },
-        "person1Id": {
-          "type": "string",
-          "description": "For parent-child this is the parent; for spouse either is acceptable."
-        },
-        "person2Id": {
-          "type": "string",
-          "description": "For parent-child this is the child."
-        },
-        "details": {
-          "type": "string",
-          "description": "Free text: 婚姻日, 養子, 家督相続, 代襲, 長男 etc."
-        },
-        "dissolved": {
-          "type": "boolean",
-          "description": "Divorce, 離縁, 縁組解消. Renderers MAY show this edge differently."
-        }
-      }
-    },
-
-    "InheritanceDiagramSection": {
-      "allOf": [
-        { "$ref": "#/$defs/SectionBase" },
-        {
-          "properties": {
-            "type": { "const": "inheritance-diagram" },
-            "data": {
-              "type": "object",
-              "required": ["variant", "persons", "relationships"],
-              "properties": {
-                "variant": {
-                  "type": "string",
-                  "description": "Jurisdictional rendering convention. 'jp-court' = 相続関係説明図 (Japanese family court / registration bureau)."
-                },
-                "persons": {
-                  "type": "array",
-                  "items": { "$ref": "#/$defs/InheritanceDiagramPerson" }
-                },
-                "relationships": {
-                  "type": "array",
-                  "items": { "$ref": "#/$defs/InheritanceDiagramRelationship" }
-                },
-                "focusedPersonId": {
-                  "type": "string",
-                  "description": "ID of the decedent (被相続人). Drives layout origin. If omitted, renderer picks the first person with deathDate set, else persons[0]."
                 }
               }
             }
