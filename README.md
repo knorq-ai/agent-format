@@ -140,8 +140,6 @@ This repository includes the reference implementation as a monorepo:
 - **[`packages/mcp`](./packages/mcp)** — the MCP Apps server published as [`@agent-format/mcp`](https://www.npmjs.com/package/@agent-format/mcp).
 - **[`packages/claude-plugin`](./packages/claude-plugin)** — a Claude Code skill that teaches Claude to write `.agent` files instead of HTML artifacts when asked to visualize or structure content.
 
-A full desktop integration exists in **[Tsuzuri](https://github.com/knorq-ai/tsuzuri)** (Tauri + web), which reads/writes `.agent` files with Claude Code integration.
-
 Want to add a second renderer (Obsidian plugin, VS Code extension, MCP Apps server)? See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---

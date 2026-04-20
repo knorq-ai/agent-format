@@ -96,9 +96,8 @@ Claude generates the `.agent` JSON, calls `render_agent_inline` with it, and the
 
 - The server is a stdio-based MCP server using `@modelcontextprotocol/sdk` and `@modelcontextprotocol/ext-apps`.
 - Tools declare a shared UI resource URI `ui://agent-format/render.html`.
-- The UI resource is a tiny HTML shell that iframes the deployed viewer at `knorq-ai.github.io/agent-format/` with the agent JSON encoded in the URL hash.
-- CSP `frameDomains` allows that origin.
-- When the tool result arrives via the MCP Apps `ui/notifications/tool-result` postMessage, the shell reads the `structuredContent.data` and points the iframe at the viewer.
+- The UI resource is a single self-contained HTML document: the `@agent-format/renderer` React bundle and CSS are inlined at build time (see `build-ui.mjs`). No nested iframes, no external fetches, no CSP `frameDomains` required — the default sandbox is sufficient.
+- When the tool result arrives via the MCP Apps `ui/notifications/tool-result` postMessage, the embedded script reads `structuredContent.data` and mounts `<AgentRenderer/>` against it directly.
 
 This means the visual output is identical to what you'd see on the standalone viewer — same React renderer, same CSS — just embedded in the chat.
 
