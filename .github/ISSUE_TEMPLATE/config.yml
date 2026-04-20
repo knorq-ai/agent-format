@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability report
+    url: https://github.com/knorq-ai/agent-format/security/advisories/new
+    about: Please disclose privately via a security advisory (see SECURITY.md).
+  - name: Spec / schema discussion
+    url: https://github.com/knorq-ai/agent-format/discussions
+    about: Open-ended design or roadmap questions about .agent v0.x.
