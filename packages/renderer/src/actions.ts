@@ -8,11 +8,38 @@
 
 import type { AgentFile } from './types'
 import { type HostBridge, fallbackOpenLink, fallbackDownload } from './host'
+import { sanitizeSvgForEmbed } from './sanitize'
 
 // Public viewer endpoint for the `.agent` format. The `#<encoded-json>` hash
 // form is documented in packages/viewer/src/App.tsx and stable across
 // viewer versions (renders the data client-side, no upload).
 const VIEWER_URL = 'https://knorq-ai.github.io/agent-format/'
+
+const VALID_PAGE_SIZES = new Map<string, string>([
+    ['a5', 'A5'],
+    ['a5 landscape', 'A5 landscape'],
+    ['a4', 'A4'],
+    ['a4 landscape', 'A4 landscape'],
+    ['a3', 'A3'],
+    ['a3 landscape', 'A3 landscape'],
+    ['b5', 'B5'],
+    ['b5 landscape', 'B5 landscape'],
+    ['b4', 'B4'],
+    ['b4 landscape', 'B4 landscape'],
+    ['letter', 'Letter'],
+    ['letter landscape', 'Letter landscape'],
+    ['legal', 'Legal'],
+    ['legal landscape', 'Legal landscape'],
+    ['ledger', 'Ledger'],
+    ['ledger landscape', 'Ledger landscape'],
+    ['tabloid', 'Tabloid'],
+    ['tabloid landscape', 'Tabloid landscape'],
+])
+
+const CUSTOM_PAGE_SIZE_RE = /^[\d.]+(mm|cm|in|pt|px)\s+[\d.]+(mm|cm|in|pt|px)$/i
+const PAGE_MARGIN_RE = /^(\d+(\.\d+)?(mm|cm|in|pt|px)\s*){1,4}$/i
+const INVALID_FONT_FAMILY_RE = /[^A-Za-z0-9 ,'"-]/
+const BLOCKED_FONT_FAMILY_RE = /{|}|<|>|;|\/\*|\*\/|@/
 
 export async function openInViewer(
     data: AgentFile,
@@ -49,6 +76,10 @@ export function buildPrintableHtml({
 }): string {
     const safeTitle = escapeHtml(documentTitle)
     const safeLabel = escapeHtml(titleLabel)
+    const safeSvg = sanitizeSvgForEmbed(svgMarkup)
+    const safePageSize = sanitizePageSize(pageSize)
+    const safeMargin = sanitizeMargin(margin)
+    const safeFontFamily = sanitizeFontFamily(fontFamily)
     const autoPrintScript = autoPrint
         ? `<script>window.addEventListener('load', () => setTimeout(() => window.print(), 250));</script>`
         : ''
@@ -56,9 +87,9 @@ export function buildPrintableHtml({
 <meta charset="utf-8">
 <title>${safeTitle}</title>
 <style>
-  @page { size: ${pageSize}; margin: ${margin}; }
+  @page { size: ${safePageSize}; margin: ${safeMargin}; }
   * { box-sizing: border-box; }
-  body { font-family: ${fontFamily}; margin: 0; padding: 24px 40px; background: #fff; color: #000; }
+  body { font-family: ${safeFontFamily}; margin: 0; padding: 24px 40px; background: #fff; color: #000; }
   .doc-title {
     text-align: center;
     font-size: 16pt;
@@ -67,14 +98,14 @@ export function buildPrintableHtml({
     margin: 0 0 36px;
   }
   svg { display: block; width: 100%; max-width: 1400px; margin: 0 auto; overflow: visible; }
-  svg text { font-family: ${fontFamily}; }
+  svg text { font-family: ${safeFontFamily}; }
   @media print { .toolbar { display: none !important; } }
   .toolbar { position: fixed; top: 8px; right: 12px; font-family: sans-serif; font-size: 12px; color: #666; }
 </style>
 </head><body>
 <div class="toolbar">⌘P で印刷 / PDF 保存</div>
 <h1 class="doc-title">${safeLabel}</h1>
-${svgMarkup}
+${safeSvg}
 ${autoPrintScript}
 </body></html>`
 }
@@ -118,4 +149,28 @@ function escapeHtml(s: string): string {
     return s.replace(/[&<>"']/g, (c) =>
         c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : c === '"' ? '&quot;' : '&#39;'
     )
+}
+
+function sanitizePageSize(pageSize: string): string {
+    const normalized = pageSize.trim().toLowerCase().replace(/\s+/g, ' ')
+    if (VALID_PAGE_SIZES.has(normalized)) return VALID_PAGE_SIZES.get(normalized) as string
+    if (CUSTOM_PAGE_SIZE_RE.test(pageSize.trim())) return pageSize.trim()
+    return 'A4'
+}
+
+function sanitizeMargin(margin: string): string {
+    const normalized = margin.trim()
+    return PAGE_MARGIN_RE.test(normalized) ? normalized : '20mm'
+}
+
+function sanitizeFontFamily(fontFamily: string): string {
+    const normalized = fontFamily.trim()
+    if (
+        !normalized ||
+        BLOCKED_FONT_FAMILY_RE.test(normalized) ||
+        INVALID_FONT_FAMILY_RE.test(normalized)
+    ) {
+        return 'sans-serif'
+    }
+    return normalized
 }

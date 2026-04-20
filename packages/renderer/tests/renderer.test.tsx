@@ -4,8 +4,12 @@ import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
 import {
     AgentRenderer,
+    buildPrintableHtml,
     findVariantComponent,
+    sanitizeSvgForEmbed,
+    SPEC_MAJOR,
     type AgentFile,
+    type ExtensionSection,
     type RendererPlugin,
     type Section,
 } from '../src'
@@ -241,6 +245,45 @@ describe('AgentRenderer — plugin API', () => {
         expect(container.textContent).toContain('Bob')
     })
 
+    it('plugin.sections renders extension section types (x-<vendor>:<name>)', () => {
+        const Ext = ({ section }: { section: Section }) => (
+            <div data-testid="ext">ext:{section.label}</div>
+        )
+        const plugin: RendererPlugin = {
+            name: 'acme',
+            sections: { 'x-acme:burndown': Ext },
+        }
+        const extSection: ExtensionSection = {
+            id: 's1',
+            type: 'x-acme:burndown',
+            label: 'B',
+            order: 0,
+            data: {},
+        }
+        const data: AgentFile = {
+            ...makeAgent([]),
+            sections: [extSection],
+        }
+        const { getByTestId } = render(<AgentRenderer data={data} plugins={[plugin]} />)
+        expect(getByTestId('ext').textContent).toBe('ext:B')
+    })
+
+    it('unknown extension sections render the fallback, not a crash', () => {
+        const ghostSection: ExtensionSection = {
+            id: 's1',
+            type: 'x-nobody:ghost',
+            label: 'G',
+            order: 0,
+            data: {},
+        }
+        const data: AgentFile = {
+            ...makeAgent([]),
+            sections: [ghostSection],
+        }
+        const { container } = render(<AgentRenderer data={data} />)
+        expect(container.textContent).toContain('not yet implemented')
+    })
+
     it('findVariantComponent returns undefined when nothing matches', () => {
         const plugin: RendererPlugin = {
             name: 'p',
@@ -275,6 +318,94 @@ describe('AgentRenderer — security', () => {
         expect(hrefs.filter((h) => h?.startsWith('https://')).length).toBe(1)
         expect(hrefs.filter((h) => h?.startsWith('javascript:')).length).toBe(0)
         expect(hrefs.filter((h) => h?.startsWith('data:')).length).toBe(0)
+    })
+
+    it.each([
+        ['entity-encoded javascript: in href', '<svg xmlns="http://www.w3.org/2000/svg"><a href="&#106;avascript:alert(1)"><text>x</text></a></svg>'],
+        ['hex entity javascript: in xlink:href', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="&#x6a;avascript:alert(1)"><text>x</text></a></svg>'],
+        ['full hex-entity-encoded javascript: scheme', '<svg xmlns="http://www.w3.org/2000/svg"><a href="&#x6a;&#x61;&#x76;&#x61;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;&#x3a;alert(1)"><text>x</text></a></svg>'],
+        ['named &colon; entity hiding the scheme colon', '<svg xmlns="http://www.w3.org/2000/svg"><a href="javascript&colon;alert(1)"><text>x</text></a></svg>'],
+        ['SMIL animate hijacking href', '<svg xmlns="http://www.w3.org/2000/svg"><a href="#safe"><animate attributeName="href" to="javascript:alert(1)"/><text>x</text></a></svg>'],
+        ['SMIL set hijacking href', '<svg xmlns="http://www.w3.org/2000/svg"><a href="#safe"><set attributeName="href" to="javascript:alert(1)"/><text>x</text></a></svg>'],
+        ['tab-split scheme', '<svg xmlns="http://www.w3.org/2000/svg"><a href="java&#9;script:alert(1)"><text>x</text></a></svg>'],
+        ['newline-split scheme', '<svg xmlns="http://www.w3.org/2000/svg"><a href="java&#10;script:alert(1)"><text>x</text></a></svg>'],
+        ['namespaced script', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"><svg:script>alert(1)</svg:script></svg>'],
+        ['style tag with url(javascript:)', '<svg xmlns="http://www.w3.org/2000/svg"><style>*{background:url(javascript:alert(1))}</style></svg>'],
+        ['style attribute', '<svg xmlns="http://www.w3.org/2000/svg"><g style="background:url(javascript:alert(1))"/></svg>'],
+        ['external use href', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="https://evil.example/x.svg#y"/></svg>'],
+    ])('sanitizer neutralizes: %s', (_label, dirty) => {
+        const clean = sanitizeSvgForEmbed(dirty)
+        // Post-sanitization the string, case-folded with entities decoded,
+        // must never contain an executable scheme or on* handler. Decode
+        // hex and decimal entities separately so the base is unambiguous —
+        // a combined `&#x?([0-9a-f]+)` regex silently parses hex as decimal
+        // because the captured group has no `x` prefix to inspect.
+        const decoded = clean
+            .replace(/&#x([0-9a-f]+);?/gi, (_m, hex: string) =>
+                String.fromCharCode(parseInt(hex, 16))
+            )
+            .replace(/&#([0-9]+);?/g, (_m, dec: string) =>
+                String.fromCharCode(parseInt(dec, 10))
+            )
+        const normalized = decoded.replace(/[\s\0]/g, '').toLowerCase()
+        expect(normalized).not.toContain('javascript:')
+        expect(normalized).not.toContain('vbscript:')
+        expect(normalized).not.toMatch(/<script/i)
+        expect(normalized).not.toMatch(/<style/i)
+        expect(normalized).not.toMatch(/onerror|onload|onclick|onmouseover/i)
+        // External <use href> must be stripped or nullified.
+        expect(normalized).not.toMatch(/use[^>]+href="https/i)
+    })
+
+    it('sanitizeSvgForEmbed strips script tags, on* handlers, javascript: URLs', () => {
+        const dirty = `<svg xmlns="http://www.w3.org/2000/svg">
+          <script>alert(1)</script>
+          <script/>
+          <a href="javascript:alert(2)" xlink:href='javascript:alert(3)'>x</a>
+          <circle onclick="alert(4)" onmouseover='alert(5)' cx="5" cy="5" r="1"/>
+          <foreignObject><iframe src="javascript:alert(6)"></iframe></foreignObject>
+        </svg>`
+        const clean = sanitizeSvgForEmbed(dirty)
+        expect(clean).not.toMatch(/<script/i)
+        expect(clean).not.toMatch(/javascript:/i)
+        expect(clean).not.toMatch(/onclick/i)
+        expect(clean).not.toMatch(/onmouseover/i)
+        expect(clean).not.toMatch(/<foreignObject/i)
+        // Safe geometry attributes survive.
+        expect(clean).toMatch(/cx="5"/)
+    })
+
+    it('buildPrintableHtml sanitizes injected SVG', () => {
+        const html = buildPrintableHtml({
+            svgMarkup: '<svg><script>alert(1)</script><g onclick="x()"/></svg>',
+            titleLabel: 'T',
+            documentTitle: 'T',
+        })
+        expect(html).not.toMatch(/<script>alert/i)
+        expect(html).not.toMatch(/onclick/i)
+    })
+
+    it('buildPrintableHtml falls back on invalid print CSS inputs', () => {
+        const html = buildPrintableHtml({
+            svgMarkup: '<svg />',
+            titleLabel: 'T',
+            documentTitle: 'T',
+            pageSize: 'A4; } body { background: red; }',
+            margin: '1px 2px 3px 4px 5px',
+            fontFamily: "'Yu Gothic'; color:red",
+        })
+        expect(html).toContain('@page { size: A4; margin: 20mm; }')
+        expect(html).toContain('body { font-family: sans-serif;')
+        expect(html).toContain('svg text { font-family: sans-serif; }')
+    })
+
+    it('warns (but does not crash) on unknown major version', () => {
+        const data: AgentFile = {
+            ...makeAgent([]),
+            version: `${SPEC_MAJOR + 5}.0`,
+        }
+        const { container } = render(<AgentRenderer data={data} />)
+        expect(container.querySelector('.af-version-warning')).not.toBeNull()
     })
 
     it('rejects unsafe CSS in kanban label color', () => {

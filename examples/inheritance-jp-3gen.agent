@@ -10,7 +10,7 @@
   "sections": [
     {
       "id": "sec-1",
-      "type": "inheritance-diagram",
+      "type": "family-graph",
       "label": "相続関係説明図（北田 宗太郎 被相続人）",
       "icon": "⚖️",
       "order": 0,

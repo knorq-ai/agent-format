@@ -4,7 +4,7 @@
 // AgentRenderer internals.
 
 import type { ComponentType, ReactElement } from 'react'
-import type { Section, SectionType } from './types'
+import type { ExtensionSectionType, Section, SectionType } from './types'
 
 export interface VariantRendererProps<S extends Section = Section> {
     section: S
@@ -34,6 +34,44 @@ export interface RendererPlugin {
      *   }
      */
     variants?: Partial<Record<SectionType | string, Record<string, VariantComponent>>>
+    /**
+     * Top-level renderers for namespaced extension section types
+     * (`x-<vendor>:<name>`, see spec § 7.2). Keys are section `type`
+     * strings; values are the component to mount. Example:
+     *
+     *   {
+     *     'x-acme:burndown-chart': BurndownChartView,
+     *   }
+     *
+     * Unlike `variants`, this claims ownership of the whole section type.
+     * Only matches when the incoming section's `type` equals the key
+     * literally; lookup is first-plugin-wins across the supplied list.
+     */
+    sections?: Partial<Record<ExtensionSectionType, VariantComponent>>
+}
+
+/**
+ * Walk the supplied plugin list in order and return the first registered
+ * top-level renderer for an extension section type, or undefined if none
+ * claims it. Used by `AgentRenderer` to route `x-<vendor>:<name>` sections.
+ */
+export function findSectionComponent(
+    plugins: ReadonlyArray<RendererPlugin>,
+    sectionType: string
+): VariantComponent | undefined {
+    // Callers pass `section.type` which is a plain string at runtime; the
+    // `sections` map is typed as `Partial<Record<ExtensionSectionType, …>>`
+    // (template-literal keys) so indexing with a raw string fails typecheck.
+    // Reading via a widened record view is safe — we never *write* through
+    // this reference, and a non-extension key simply returns undefined.
+    for (const plugin of plugins) {
+        const table = plugin.sections as
+            | Record<string, VariantComponent>
+            | undefined
+        const component = table?.[sectionType]
+        if (component) return component
+    }
+    return undefined
 }
 
 /**

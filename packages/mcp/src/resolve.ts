@@ -41,6 +41,13 @@ export async function resolveAgentFile(
         readFile: typeof fs.readFile
     } = fs
 ): Promise<ResolveResult> {
+    if (!path.isAbsolute(filePath)) {
+        return {
+            ok: false,
+            message: 'filePath must be an absolute path',
+        }
+    }
+
     const resolved = path.resolve(filePath)
     const base = path.basename(resolved)
 

@@ -1,4 +1,5 @@
 {
+  "$schema": "https://agent-format.org/schemas/v0.1/agent.schema.json",
   "version": "0.1",
   "name": "Minimal example",
   "description": "The smallest valid agent file.",

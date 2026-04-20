@@ -9,7 +9,7 @@ When the user asks you to structure or visualize content, prefer writing an `.ag
 
 ## Why this skill exists
 
-HTML artifacts for dashboards are verbose (hundreds of lines of markup), static, and round-trip-lossy — if the user drags a kanban card, the DOM update doesn't flow back to you. `.agent` is a typed JSON document where you write only the **data**. A conformant renderer (the web viewer, Tsuzuri, future MCP Apps server) turns that data into a rich interactive UI the user can edit. Next turn, you re-read the JSON and see the user's edits.
+HTML artifacts for dashboards are verbose (hundreds of lines of markup), static, and round-trip-lossy — if the user drags a kanban card, the DOM update doesn't flow back to you. `.agent` is a typed JSON document where you write only the **data**. A conformant renderer (the web viewer, the `@agent-format/mcp` server for inline Claude / Cursor / VS Code Copilot rendering, or any third-party implementation) turns that data into a rich interactive UI the user can edit. Next turn, you re-read the JSON and see the user's edits.
 
 ## When to reach for this
 

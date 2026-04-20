@@ -29,22 +29,25 @@ export default function Page({ data }: { data: AgentFile }) {
 
 ## Section support (v0.1)
 
-All 12 v0.1 section types are implemented:
+The renderer supports 13 built-in section types, plus the deprecated `inheritance-diagram` alias and `x-<vendor>:<name>` extension sections:
 
 | Type | Use for |
 |---|---|
 | `kanban` | Status-column board with cards, labels, WIP limits |
 | `checklist` | Grouped todo items with progress counts |
-| `notes` | Ordered markdown blocks |
+| `notes` | Ordered plain-text blocks (newlines preserved) |
 | `timeline` | Items + milestones with dates |
 | `table` | Rows with typed columns (text / number / date / select / status) |
 | `log` | Risks, decisions, issues with badges |
 | `metrics` | KPI cards with value / unit / trend |
 | `diagram` | Nested tree (mind map / hierarchy) |
-| `report` | Repeating markdown reports |
+| `report` | Repeating plain-text reports (newlines preserved) |
 | `form` | Input fields + submission count |
 | `links` | URL list grouped by category |
 | `references` | File references with memos |
+| `family-graph` | Genealogy / inheritance diagrams, including plugin variants |
+| `inheritance-diagram` | Deprecated alias for `family-graph` |
+| `x-<vendor>:<name>` | Extension sections rendered by plugins or fallback UI |
 
 Unknown section types render as a fallback showing the raw JSON, per the spec's conformance rule that readers MUST NOT error on unknown section types.
 

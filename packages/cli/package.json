@@ -1,0 +1,43 @@
+{
+  "name": "@agent-format/cli",
+  "version": "0.1.0",
+  "description": "CLI validator for .agent files — a minimal, React-free reference implementation of the agent-format v0.1 schema.",
+  "license": "MIT",
+  "author": "Yuya Morita",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/knorq-ai/agent-format.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/knorq-ai/agent-format/tree/main/packages/cli",
+  "bin": {
+    "agent-format": "dist/cli.js"
+  },
+  "main": "./dist/cli.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && cp ../../schemas/agent.schema.json dist/agent.schema.json && chmod +x dist/cli.js",
+    "pretest": "npm run build",
+    "test": "vitest run tests/cli.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "keywords": [
+    "agent-format",
+    "cli",
+    "validator",
+    "json-schema"
+  ]
+}

@@ -11,6 +11,14 @@ import { createRequire } from 'node:module'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 
+// Read the package version from our own package.json so the App version
+// reported to the MCP Apps host matches the published npm version exactly.
+// Avoids the prior foot-gun of a hand-edited string in ui-client.tsx drifting
+// behind package.json after a release bump.
+const pkg = JSON.parse(
+    await fs.readFile(path.join(__dirname, 'package.json'), 'utf8')
+)
+
 const result = await esbuild.build({
     entryPoints: [path.join(__dirname, 'src/ui-client.tsx')],
     bundle: true,
@@ -20,7 +28,10 @@ const result = await esbuild.build({
     minify: true,
     jsx: 'automatic',
     outfile: path.join(__dirname, 'dist/ui-client.js'),
-    define: { 'process.env.NODE_ENV': '"production"' },
+    define: {
+        'process.env.NODE_ENV': '"production"',
+        __APP_VERSION__: JSON.stringify(pkg.version),
+    },
     logLevel: 'info',
 })
 

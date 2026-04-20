@@ -37,4 +37,85 @@ describe('JSON Schema', () => {
             expect(ok).toBe(true)
         })
     }
+
+    // Negative cases: prove the closed-schema claim holds.
+    const base = {
+        version: '0.1',
+        name: 't',
+        createdAt: '2026-04-18T00:00:00Z',
+        updatedAt: '2026-04-18T00:00:00Z',
+        config: { proactive: false },
+        sections: [],
+        memory: { observations: [], preferences: {} },
+    }
+
+    it('rejects unknown top-level property', () => {
+        const bad = { ...base, bogusTopLevel: 123 }
+        expect(validate(bad)).toBe(false)
+    })
+
+    it('accepts top-level x-* extension fields (§ 7.1)', () => {
+        const ok = { ...base, 'x-acme-snapshot-id': 'abc' }
+        expect(validate(ok)).toBe(true)
+    })
+
+    it('accepts an x-<vendor>:<name> extension section type (§ 7.2)', () => {
+        const ok = {
+            ...base,
+            sections: [
+                {
+                    id: 's1',
+                    type: 'x-acme:burndown-chart',
+                    label: 'Burndown',
+                    order: 0,
+                    data: { whatever: 42 },
+                },
+            ],
+        }
+        expect(validate(ok)).toBe(true)
+    })
+
+    it('rejects a bare unknown section type (must use x-<vendor>:<name>)', () => {
+        const bad = {
+            ...base,
+            sections: [
+                {
+                    id: 's1',
+                    type: 'custom-widget',
+                    label: 'X',
+                    order: 0,
+                    data: {},
+                },
+            ],
+        }
+        expect(validate(bad)).toBe(false)
+    })
+
+    it('rejects extra property inside a closed nested object', () => {
+        const bad = {
+            ...base,
+            sections: [
+                {
+                    id: 's1',
+                    type: 'notes',
+                    label: 'N',
+                    order: 0,
+                    data: {
+                        blocks: [{ id: 'b1', content: 'hi', extra: 'nope' }],
+                    },
+                },
+            ],
+        }
+        expect(validate(bad)).toBe(false)
+    })
+
+    it('rejects a section missing its required `data`', () => {
+        const bad = {
+            ...base,
+            sections: [
+                { id: 's1', type: 'notes', label: 'N', order: 0 },
+            ],
+        }
+        expect(validate(bad)).toBe(false)
+    })
 })
