@@ -35,6 +35,12 @@ describe('resolveAgentFile', () => {
         expect(r.sectionCount).toBe(0)
     })
 
+    it('rejects a relative path before touching the filesystem', async () => {
+        const r = await resolveAgentFile('relative.agent')
+        expect(r.ok).toBe(false)
+        expect(r.message).toBe('filePath must be an absolute path')
+    })
+
     it('rejects a non-.agent extension (XYZ.txt, .json)', async () => {
         const p = path.join(tmp, 'x.json')
         await fs.writeFile(p, JSON.stringify(VALID_AGENT))

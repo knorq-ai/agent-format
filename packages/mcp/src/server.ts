@@ -117,6 +117,9 @@ registerAppTool(
                     isError: true,
                 }
             }
+            if (!validateAgent(result.data)) {
+                return invalidAgentResult(validateAgent.errors)
+            }
             return {
                 content: [{ type: 'text', text: result.message }],
                 structuredContent: { data: result.data } as Record<string, unknown>,
@@ -169,15 +172,7 @@ registerAppTool(
         // the UI iframe never tries to render garbage. Keep the message short
         // (first couple of errors) so models can self-correct without a flood.
         if (!validateAgent(data)) {
-            return {
-                content: [
-                    {
-                        type: 'text',
-                        text: `Invalid .agent document: ${summarizeAjvErrors(validateAgent.errors)}`,
-                    },
-                ],
-                isError: true,
-            }
+            return invalidAgentResult(validateAgent.errors)
         }
         const name = typeof data.name === 'string' ? data.name : 'agent data'
         return {
@@ -219,6 +214,18 @@ registerAppResource(
 async function main(): Promise<void> {
     const transport = new StdioServerTransport()
     await server.connect(transport)
+}
+
+function invalidAgentResult(errors: ValidateFunction['errors']): CallToolResult {
+    return {
+        content: [
+            {
+                type: 'text',
+                text: `Invalid .agent document: ${summarizeAjvErrors(errors)}`,
+            },
+        ],
+        isError: true,
+    }
 }
 
 main().catch((err) => {

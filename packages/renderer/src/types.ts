@@ -18,6 +18,9 @@ export type SectionType =
     // Deprecated alias for 'family-graph'. Still accepted by the renderer
     // so existing .agent files don't break; emit 'family-graph' in new files.
     | 'inheritance-diagram'
+    | ExtensionSectionType
+
+export type ExtensionSectionType = `x-${string}:${string}`
 
 export interface SectionBase {
     id: string
@@ -340,6 +343,17 @@ export interface InheritanceDiagramSection extends SectionBase {
     data: FamilyGraphData
 }
 
+// --- Extension sections ---
+
+/**
+ * Vendor-defined extension section types, e.g. `x-acme:burndown`.
+ * Core renderers should either delegate these to plugins or show fallback UI.
+ */
+export interface ExtensionSection extends SectionBase {
+    type: ExtensionSectionType
+    data: Record<string, unknown>
+}
+
 // --- Union ---
 
 export type Section =
@@ -357,6 +371,7 @@ export type Section =
     | ReferencesSection
     | FamilyGraphSection
     | InheritanceDiagramSection
+    | ExtensionSection
 
 // --- Root ---
 

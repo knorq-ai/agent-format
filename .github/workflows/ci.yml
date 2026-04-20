@@ -21,6 +21,6 @@ jobs:
       - run: npm test
       - name: npm pack dry-run (catches broken files globs)
         run: |
-          for pkg in packages/renderer packages/jp-court packages/mcp; do
+          for pkg in packages/renderer packages/jp-court packages/mcp packages/cli; do
             (cd "$pkg" && npm pack --dry-run)
           done

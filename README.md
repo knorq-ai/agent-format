@@ -83,13 +83,13 @@ That combination is what this spec defines.
 }
 ```
 
-An agent reads this JSON. It sees *"this project has a kanban of workstreams, I remember these observations about the user."* It writes back changes to the same file. A human opens the same file in any conformant renderer and sees a rendered kanban + an editable instructions panel + an observable memory list.
+An agent reads this JSON. It sees *"this project has a kanban of workstreams, I remember these observations about the user."* It writes back changes to the same file. A human opens the same file in any conformant renderer and sees the rendered sections as an interactive dashboard.
 
 ---
 
-## 12 section types
+## Supported section types
 
-Each section has a closed schema. The agent chooses which section type fits a concept.
+The core renderer defines 13 built-in section types, plus the deprecated `inheritance-diagram` alias and `x-<vendor>:<name>` extension sections. The agent chooses which section type fits a concept.
 
 | Type | Use for |
 |---|---|
@@ -105,6 +105,9 @@ Each section has a closed schema. The agent chooses which section type fits a co
 | `form` | Input fields and submissions |
 | `links` | External URLs grouped by category |
 | `references` | Local file references (path + memo) |
+| `family-graph` | Genealogy / inheritance / kinship diagrams |
+| `inheritance-diagram` | Deprecated alias for `family-graph` |
+| `x-<vendor>:<name>` | Vendor-defined extension sections rendered by plugins or fallback UI |
 
 See [SPEC.md](./SPEC.md) for the full field list of each.
 
@@ -146,7 +149,7 @@ Want to add a second renderer (Obsidian plugin, VS Code extension, MCP Apps serv
 
 ## Status and roadmap
 
-- ✅ **v0.1 draft** (this repo) — 12 section types, JSON Schema, examples
+- ✅ **v0.1 draft** (this repo) — 13 built-in section types, deprecated alias support, extension-section typing, JSON Schema, examples
 - ⏳ **v0.2** — formalize extension mechanism (custom section types), stabilize ID conventions
 - ⏳ **v0.3** — relations between sections (e.g. a `log` entry links to a `kanban` item)
 - ⏳ **v1.0** — stable; breaking changes require major version bump

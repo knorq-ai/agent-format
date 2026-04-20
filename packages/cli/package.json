@@ -22,6 +22,8 @@
   ],
   "scripts": {
     "build": "tsc && cp ../../schemas/agent.schema.json dist/agent.schema.json && chmod +x dist/cli.js",
+    "pretest": "npm run build",
+    "test": "vitest run tests/cli.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

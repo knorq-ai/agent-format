@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "pretest": "npm run build -w @agent-format/cli",
     "build": "npm run build -w @agent-format/renderer && npm run build -w @agent-format/jp-court && npm run build -w @agent-format/viewer && npm run build -w @agent-format/mcp && npm run build -w @agent-format/cli",
     "dev": "npm run dev -w @agent-format/viewer",
     "dev:renderer": "npm run dev -w @agent-format/renderer",

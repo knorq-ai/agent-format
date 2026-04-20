@@ -9,6 +9,7 @@ import {
     sanitizeSvgForEmbed,
     SPEC_MAJOR,
     type AgentFile,
+    type ExtensionSection,
     type RendererPlugin,
     type Section,
 } from '../src'
@@ -252,24 +253,32 @@ describe('AgentRenderer — plugin API', () => {
             name: 'acme',
             sections: { 'x-acme:burndown': Ext },
         }
+        const extSection: ExtensionSection = {
+            id: 's1',
+            type: 'x-acme:burndown',
+            label: 'B',
+            order: 0,
+            data: {},
+        }
         const data: AgentFile = {
             ...makeAgent([]),
-            sections: [
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                { id: 's1', type: 'x-acme:burndown' as any, label: 'B', order: 0, data: {} as any },
-            ],
+            sections: [extSection],
         }
         const { getByTestId } = render(<AgentRenderer data={data} plugins={[plugin]} />)
         expect(getByTestId('ext').textContent).toBe('ext:B')
     })
 
     it('unknown extension sections render the fallback, not a crash', () => {
+        const ghostSection: ExtensionSection = {
+            id: 's1',
+            type: 'x-nobody:ghost',
+            label: 'G',
+            order: 0,
+            data: {},
+        }
         const data: AgentFile = {
             ...makeAgent([]),
-            sections: [
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                { id: 's1', type: 'x-nobody:ghost' as any, label: 'G', order: 0, data: {} as any },
-            ],
+            sections: [ghostSection],
         }
         const { container } = render(<AgentRenderer data={data} />)
         expect(container.textContent).toContain('not yet implemented')
@@ -374,6 +383,20 @@ describe('AgentRenderer — security', () => {
         })
         expect(html).not.toMatch(/<script>alert/i)
         expect(html).not.toMatch(/onclick/i)
+    })
+
+    it('buildPrintableHtml falls back on invalid print CSS inputs', () => {
+        const html = buildPrintableHtml({
+            svgMarkup: '<svg />',
+            titleLabel: 'T',
+            documentTitle: 'T',
+            pageSize: 'A4; } body { background: red; }',
+            margin: '1px 2px 3px 4px 5px',
+            fontFamily: "'Yu Gothic'; color:red",
+        })
+        expect(html).toContain('@page { size: A4; margin: 20mm; }')
+        expect(html).toContain('body { font-family: sans-serif;')
+        expect(html).toContain('svg text { font-family: sans-serif; }')
     })
 
     it('warns (but does not crash) on unknown major version', () => {

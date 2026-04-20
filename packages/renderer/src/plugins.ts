@@ -4,7 +4,7 @@
 // AgentRenderer internals.
 
 import type { ComponentType, ReactElement } from 'react'
-import type { Section, SectionType } from './types'
+import type { ExtensionSectionType, Section, SectionType } from './types'
 
 export interface VariantRendererProps<S extends Section = Section> {
     section: S
@@ -47,7 +47,7 @@ export interface RendererPlugin {
      * Only matches when the incoming section's `type` equals the key
      * literally; lookup is first-plugin-wins across the supplied list.
      */
-    sections?: Record<string, VariantComponent>
+    sections?: Partial<Record<ExtensionSectionType, VariantComponent>>
 }
 
 /**
@@ -59,8 +59,16 @@ export function findSectionComponent(
     plugins: ReadonlyArray<RendererPlugin>,
     sectionType: string
 ): VariantComponent | undefined {
+    // Callers pass `section.type` which is a plain string at runtime; the
+    // `sections` map is typed as `Partial<Record<ExtensionSectionType, …>>`
+    // (template-literal keys) so indexing with a raw string fails typecheck.
+    // Reading via a widened record view is safe — we never *write* through
+    // this reference, and a non-extension key simply returns undefined.
     for (const plugin of plugins) {
-        const component = plugin.sections?.[sectionType]
+        const table = plugin.sections as
+            | Record<string, VariantComponent>
+            | undefined
+        const component = table?.[sectionType]
         if (component) return component
     }
     return undefined
