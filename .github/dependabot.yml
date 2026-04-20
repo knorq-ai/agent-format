@@ -1,0 +1,52 @@
+version: 2
+updates:
+  # npm — run weekly so lockfile churn is predictable and reviewable.
+  # Grouped by ecosystem to collapse related bumps into a single PR.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+      include: scope
+    groups:
+      typescript:
+        patterns:
+          - typescript
+          - "@types/*"
+          - "tsup"
+          - "tsx"
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@testing-library/*"
+      test:
+        patterns:
+          - vitest
+          - "@vitest/*"
+          - happy-dom
+      schema:
+        patterns:
+          - ajv
+          - ajv-formats
+          - ajv-*
+      mcp:
+        patterns:
+          - "@modelcontextprotocol/*"
+    ignore:
+      # Pin the MCP Apps SDK major until we validate the render pipeline.
+      - dependency-name: "@modelcontextprotocol/ext-apps"
+        update-types: [version-update:semver-major]
+
+  # Keep Actions SHA-pins fresh — security patches land via Dependabot.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: ci
+      include: scope

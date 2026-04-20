@@ -1,0 +1,75 @@
+name: Bug report
+description: Something that renders, validates, or round-trips incorrectly.
+title: "bug: "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. **Do not** report security
+        vulnerabilities here — use the private advisory link on the issue picker.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which package / area?
+      options:
+        - "@agent-format/renderer"
+        - "@agent-format/viewer"
+        - "@agent-format/mcp"
+        - "@agent-format/cli"
+        - "@agent-format/jp-court"
+        - Spec / schema
+        - Docs / examples
+        - Other
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: Run `npm ls <package>` or check `package.json`.
+      placeholder: "0.1.5"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Minimal steps or a code snippet. A small `.agent` fixture is ideal.
+      placeholder: |
+        1. Run `agent-format path/to/file.agent`
+        2. Observed error: ...
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, OS, and browser if relevant.
+      placeholder: "Node 20.11, macOS 14.4, Chrome 126"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or stack trace
+      render: shell

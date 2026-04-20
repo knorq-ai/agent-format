@@ -1,0 +1,49 @@
+name: Feature request
+description: A new section type, renderer capability, tooling, or spec addition.
+title: "feat: "
+labels: [enhancement, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If your idea is a new **section type**, please check § 7.2 of
+        [SPEC.md](../SPEC.md) first — most new section types belong in a
+        plugin registered as `x-<vendor>:<name>` rather than the core enum.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Tell us about the user pain this would address.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Sketch API / schema / rendering behavior. Rough is fine.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else did you think about? Why is the proposal better?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Core spec / schema change
+        - New built-in section type
+        - New extension section (`x-<vendor>:<name>`)
+        - Renderer / viewer enhancement
+        - MCP server enhancement
+        - CLI enhancement
+        - Docs / examples
+      default: 2
+    validations:
+      required: true
