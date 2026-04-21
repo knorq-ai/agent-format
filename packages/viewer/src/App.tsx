@@ -1,6 +1,7 @@
 import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { AgentRenderer, type AgentFile } from '@agent-format/renderer'
 import { jpCourtPlugin } from '@agent-format/jp-court'
+import { validateAgentDoc } from './validator'
 
 // Plugins registered in the deployed viewer. Registering jp-court here so
 // `family-graph` sections with `variant: "jp-court"` get the Japanese-legal
@@ -37,11 +38,12 @@ class RenderErrorBoundary extends Component<
 const MAX_REMOTE_BYTES = 5 * 1024 * 1024
 const REMOTE_FETCH_TIMEOUT_MS = 15_000
 
+type ValidationIssue = { instancePath: string; message: string }
 type LoadState =
     | { kind: 'empty' }
     | { kind: 'loading' }
     | { kind: 'ok'; data: AgentFile }
-    | { kind: 'error'; message: string }
+    | { kind: 'error'; message: string; issues?: ValidationIssue[] }
 
 export function App() {
     const [state, setState] = useState<LoadState>({ kind: 'empty' })
@@ -49,15 +51,32 @@ export function App() {
     const [dragging, setDragging] = useState(false)
 
     const loadFromJson = useCallback((text: string) => {
+        let parsed: unknown
         try {
-            const parsed = JSON.parse(text) as AgentFile
-            if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.sections)) {
-                throw new Error('Input does not look like an agent file (missing sections array).')
-            }
-            setState({ kind: 'ok', data: parsed })
+            parsed = JSON.parse(text)
         } catch (err) {
-            setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) })
+            setState({
+                kind: 'error',
+                message: `Not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
+            })
+            return
         }
+        const result = validateAgentDoc(parsed)
+        if (!result.ok) {
+            const head =
+                result.stage === 'schema'
+                    ? 'Schema validation failed — this does not conform to the .agent v0.1 schema.'
+                    : 'Semantic validation failed — the file parses but breaks referential / uniqueness rules.'
+            const total = result.errors.length
+            const shown = result.errors.slice(0, 20)
+            const message =
+                total > shown.length
+                    ? `${head} (showing first ${shown.length} of ${total} issues)`
+                    : head
+            setState({ kind: 'error', message, issues: shown })
+            return
+        }
+        setState({ kind: 'ok', data: parsed as AgentFile })
     }, [])
 
     const loadFromUrl = useCallback(
@@ -252,7 +271,20 @@ export function App() {
                 </div>
             </div>
 
-            {state.kind === 'error' && <div className="error">{state.message}</div>}
+            {state.kind === 'error' && (
+                <div className="error">
+                    <div>{state.message}</div>
+                    {state.issues && state.issues.length > 0 && (
+                        <ul style={{ marginTop: 8, paddingLeft: 18 }}>
+                            {state.issues.map((iss, i) => (
+                                <li key={i}>
+                                    <code>{iss.instancePath || '/'}</code>: {iss.message}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            )}
             {state.kind === 'loading' && <p style={{ marginTop: 16 }}>Loading…</p>}
 
             <div className="helper">

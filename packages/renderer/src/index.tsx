@@ -29,6 +29,7 @@ export {
     downloadPrintableHtml,
 } from './actions'
 export { sanitizeSvgForEmbed } from './sanitize'
+export { validateSemantics, type SemanticError } from './validate'
 
 // Spec major version this renderer is built against. Documents whose
 // `version` major exceeds this are rendered with a warning banner; the

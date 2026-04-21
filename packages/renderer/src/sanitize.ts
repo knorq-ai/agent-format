@@ -144,20 +144,38 @@ function sanitizeDom(root: Element): void {
     for (const el of toRemove) el.parentNode?.removeChild(el)
 }
 
-// Hardened regex fallback for environments without DOMParser. Intentionally
-// aggressive: we'd rather destroy valid SVG than miss a payload.
+// Allowlist-based regex fallback for environments without DOMParser.
+// Intentionally aggressive: we'd rather destroy valid SVG than miss a payload.
+//
+// Two-stage model:
+//   1. Content-destroying pass for tags whose *contents* are dangerous
+//      (script, style, foreignObject, …). These get their open+close tags
+//      and the text between them deleted wholesale.
+//   2. Allowlist pass: every tag marker (`<x>`, `</x>`, `<x/>`) whose
+//      localName is not in ALLOWED_TAGS has its markers stripped. Text
+//      nodes between unknown tags are preserved but become plain content
+//      once the element boundary is gone, which is what makes this an
+//      allowlist rather than an ever-growing blocklist.
+const ALLOWED_TAGS_LC = new Set(
+    Array.from(ALLOWED_TAGS, (t) => t.toLowerCase())
+)
+
 function sanitizeRegex(svg: string): string {
     let out = svg
-    // Strip anything that looks like a script / style / foreign-object block,
-    // with or without namespace prefixes (handles `<svg:script>`).
-    const blockTags = [
+    // Stage 1: destroy tag-and-content for the highest-risk elements.
+    // These carry payloads in their child text/CDATA (script bodies,
+    // CSS expressions, HTML-in-SVG), so we can't just strip the markers.
+    // SMIL animation elements get destroyed here too because `<animate
+    // to="javascript:…">` can hijack a permitted href at runtime.
+    const destroyTags = [
         'script', 'style', 'foreignObject', 'iframe', 'object', 'embed',
-        // SMIL animation elements can hijack permitted href/src attributes
-        // via `to=`/`values=`/`from=` even if their own attributes look clean.
         'animate', 'animateTransform', 'animateMotion', 'set', 'mpath', 'discard',
         'audio', 'video', 'canvas',
+        // SVG `<image>` element loads external images. Not in ALLOWED_TAGS,
+        // but listed here so the content is destroyed, not just the markers.
+        'image',
     ]
-    for (const t of blockTags) {
+    for (const t of destroyTags) {
         const open = new RegExp(`<(?:[\\w-]+:)?${t}\\b[^>]*>[\\s\\S]*?<\\/(?:[\\w-]+:)?${t}\\s*[^>]*>`, 'gi')
         const selfClose = new RegExp(`<(?:[\\w-]+:)?${t}\\b[^>]*\\/>`, 'gi')
         // Also strip malformed / unterminated openings up to the next `>`
@@ -165,6 +183,19 @@ function sanitizeRegex(svg: string): string {
         const orphan = new RegExp(`<(?:[\\w-]+:)?${t}\\b[^>]*>`, 'gi')
         out = out.replace(open, '').replace(selfClose, '').replace(orphan, '')
     }
+    // Stage 2: allowlist pass. Any tag whose localName isn't in
+    // ALLOWED_TAGS has its `<...>` markers deleted. Attribute values that
+    // happen to contain `>` will cause boundary confusion and over-strip
+    // — that's intentionally false-positive. Comments and CDATA are
+    // stripped unconditionally to avoid tag-smuggling tricks.
+    out = out.replace(/<!--[\s\S]*?-->/g, '')
+    out = out.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, '')
+    out = out.replace(
+        /<\/?(?:[\w-]+:)?([\w-]+)\b[^>]*?\/?>/g,
+        (match, localName: string) => {
+            return ALLOWED_TAGS_LC.has(String(localName).toLowerCase()) ? match : ''
+        }
+    )
     // Drop all on* attributes.
     out = out.replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
     // Drop all style="" attributes.

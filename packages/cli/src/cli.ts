@@ -11,6 +11,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
+import { validateSemantics, type SemanticError } from './semantic.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const requireCjs = createRequire(import.meta.url)
@@ -35,6 +36,7 @@ interface Args {
     version: boolean
     allErrors: boolean
     quiet: boolean
+    skipSemantic: boolean
 }
 
 function parseArgs(argv: string[]): Args {
@@ -44,12 +46,14 @@ function parseArgs(argv: string[]): Args {
         version: false,
         allErrors: true,
         quiet: false,
+        skipSemantic: false,
     }
     for (const a of argv) {
         if (a === '-h' || a === '--help') out.help = true
         else if (a === '-v' || a === '--version') out.version = true
         else if (a === '--first-error-only') out.allErrors = false
         else if (a === '-q' || a === '--quiet') out.quiet = true
+        else if (a === '--skip-semantic') out.skipSemantic = true
         else if (a.startsWith('-')) {
             console.error(`Unknown flag: ${a}`)
             process.exit(2)
@@ -71,6 +75,7 @@ function usage(): string {
         '  -h, --help              Show this help and exit.',
         '  -v, --version           Print the CLI version and schema $id.',
         '  --first-error-only      Stop at the first validation error per file.',
+        '  --skip-semantic         Skip the semantic pass (ID uniqueness, refs).',
         '  -q, --quiet             Only print paths of failing files.',
     ].join('\n')
 }
@@ -92,6 +97,10 @@ function pkgVersion(): string {
 function formatError(e: AjvErrorsEntry): string {
     const path = e.instancePath || '/'
     return `  ${path}: ${e.message ?? 'invalid'}`
+}
+
+function formatSemanticError(e: SemanticError): string {
+    return `  ${e.instancePath || '/'}: ${e.message}`
 }
 
 async function main(): Promise<void> {
@@ -125,9 +134,23 @@ async function main(): Promise<void> {
             )
             continue
         }
+        // Separate read from parse so filesystem errors (EISDIR from a
+        // directory path, EACCES, ENOENT) don't get mislabeled as JSON
+        // parse failures — that misdirection sends users hunting for a
+        // syntax bug that isn't there.
+        let text: string
+        try {
+            text = fs.readFileSync(resolved, 'utf8')
+        } catch (err) {
+            fails++
+            process.stderr.write(
+                `✗ ${file}: cannot read — ${(err as Error).message}\n`
+            )
+            continue
+        }
         let data: unknown
         try {
-            data = JSON.parse(fs.readFileSync(resolved, 'utf8'))
+            data = JSON.parse(text)
         } catch (err) {
             fails++
             process.stderr.write(
@@ -135,9 +158,7 @@ async function main(): Promise<void> {
             )
             continue
         }
-        if (validate(data)) {
-            if (!args.quiet) process.stdout.write(`✓ ${file}\n`)
-        } else {
+        if (!validate(data)) {
             fails++
             process.stderr.write(`✗ ${file}\n`)
             if (!args.quiet) {
@@ -145,7 +166,20 @@ async function main(): Promise<void> {
                     process.stderr.write(formatError(e) + '\n')
                 }
             }
+            continue
         }
+        const semanticErrors = args.skipSemantic ? [] : validateSemantics(data)
+        if (semanticErrors.length > 0) {
+            fails++
+            process.stderr.write(`✗ ${file} (semantic)\n`)
+            if (!args.quiet) {
+                for (const e of semanticErrors) {
+                    process.stderr.write(formatSemanticError(e) + '\n')
+                }
+            }
+            continue
+        }
+        if (!args.quiet) process.stdout.write(`✓ ${file}\n`)
     }
     process.exit(fails === 0 ? 0 : 1)
 }
