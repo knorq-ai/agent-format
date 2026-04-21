@@ -6,3 +6,5 @@ dist/
 .idea/
 *.tsbuildinfo
 .vite/
+# Generated at build time by scripts/build-validator.mjs.
+src/generated/

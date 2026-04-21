@@ -16,7 +16,7 @@ A conforming renderer MUST display each section using the section's type-specifi
 2. **Typed, closed schemas per widget.** Each section type has a well-defined shape. LLMs produce reliable edits because the schema is narrow.
 3. **Portable.** A user can commit an `.agent` file to git, attach it to an email, or share it between apps.
 4. **Human- and agent-editable.** The format is designed to be read and written by *both* a human through a UI and an LLM through direct JSON manipulation.
-5. **Extensible without breaking.** Unknown fields MUST be preserved by round-trippers; unknown section types MUST NOT error the reader.
+5. **Extensible without breaking.** Extension surfaces are well-defined: top-level `x-*` fields (§ 7.1) and namespaced extension section types `x-<vendor>:<name>` (§ 7.2). These MUST be preserved by round-trippers and MUST NOT error the reader. Core section `data` payloads are typed closed (§ 4) — vendors adding fields MUST use an extension section type, not inject unknown keys into a core type.
 
 ### 1.2 File metadata
 
@@ -363,7 +363,7 @@ A conforming writer MUST:
 - Produce documents that validate against [`schemas/agent.schema.json`](./schemas/agent.schema.json).
 - Set `version` to a supported spec version.
 - Set `createdAt` and `updatedAt`; update `updatedAt` on every write.
-- Preserve unknown fields when round-tripping an existing file.
+- Preserve top-level `x-*` fields (§ 7.1) and extension sections (§ 7.2) when round-tripping an existing file. Core section payloads are closed — do not round-trip unknown keys *inside* a core section; vendors needing that surface MUST use an extension section type.
 
 A conforming writer SHOULD:
 
@@ -375,13 +375,14 @@ A conforming writer SHOULD:
 A conforming reader MUST:
 
 - Render sections by `type` and display them in `order` ascending.
-- Not error on unknown section types; fall back to a minimal display (e.g. "Unknown section: X").
-- Not error on unknown optional fields.
+- Not error on unknown section types (extension types `x-<vendor>:<name>` it does not recognize); fall back to a minimal display (e.g. "Unknown section: X").
+- Not error on unknown top-level `x-*` fields.
+- Tolerate (not crash on) unknown keys inside core section payloads produced by non-conforming writers — drop or ignore them in render, not throw. This is runtime robustness, separate from schema validation.
 
 A conforming reader SHOULD:
 
 - Allow the user to edit sections directly.
-- Preserve unknown fields when saving.
+- Preserve top-level `x-*` fields and extension sections when saving.
 
 ---
 

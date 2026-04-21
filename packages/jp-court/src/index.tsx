@@ -404,7 +404,13 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
     // parent-pairs. A vertical line drops from the midpoint of each pair
     // down to their child in the generation below.
     const ancestorElements: ReactElement[] = []
-    type AncestorBlock = { id: string; centerX: number; topY: number; bottomY: number }
+    type AncestorBlock = {
+        id: string
+        centerX: number
+        topY: number
+        bottomY: number
+        elements: ReactElement[]
+    }
     const ancestorByPersonId = new Map<string, AncestorBlock>()
 
     // BFS upward from the decedent; collect per-level lists of parent pairs.
@@ -440,9 +446,10 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
         topY: number,
         roleLabel: string
     ): AncestorBlock => {
+        const els: ReactElement[] = []
         let y = topY + LINE_H
         if (p.address) {
-            ancestorElements.push(
+            els.push(
                 <text
                     key={nextKey()}
                     x={leftX + ancestorBlockTextX}
@@ -455,7 +462,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
             y += LINE_H - 4
         }
         if (p.birthday) {
-            ancestorElements.push(
+            els.push(
                 <text
                     key={nextKey()}
                     x={leftX + ancestorBlockTextX}
@@ -468,7 +475,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
             y += LINE_H - 4
         }
         if (p.deathDate) {
-            ancestorElements.push(
+            els.push(
                 <text
                     key={nextKey()}
                     x={leftX + ancestorBlockTextX}
@@ -480,7 +487,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
             )
             y += LINE_H - 4
         }
-        ancestorElements.push(
+        els.push(
             <text
                 key={nextKey()}
                 x={leftX + ancestorBlockTextX + 8}
@@ -492,7 +499,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
         )
         y += LINE_H - 4
         const nameBaseY = y + 4
-        ancestorElements.push(
+        els.push(
             <text
                 key={nextKey()}
                 x={leftX + ancestorBlockTextX}
@@ -510,6 +517,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
             centerX: leftX + ancestorBlockW / 2,
             topY,
             bottomY,
+            elements: els,
         }
     }
 
@@ -533,12 +541,15 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
             ? renderChildGroup(children, CHILD_TEXT_X, childGroupTopY, 0)
             : { elements: [], nameYs: [], endY: childGroupTopY }
 
-    // Record decedent position for ancestor line-up.
+    // Record decedent position for ancestor line-up. The decedent's own
+    // visual block is rendered separately by renderBlock, so there are no
+    // ancestor-layer elements to track here.
     ancestorByPersonId.set(decedent.id, {
         id: decedent.id,
         centerX: TEXT_X + ancestorBlockW / 2,
         topY: decTopY,
         bottomY: dec.blockEndY,
+        elements: [],
     })
 
     // Render ancestor rows from bottom (nearest parent) upward to the top.
@@ -562,6 +573,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
                 )
                 ancestorByPersonId.set(parent.id, block)
                 renderedParents.push(block)
+                ancestorElements.push(...block.elements)
                 cursorX += ancestorBlockW + 30
             }
             // Spouse double-line between two-parent pairs.
@@ -741,14 +753,10 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
                 oy += ANCESTOR_ROW_H
             }
             const b = renderAncestorBlock(p, ox, oy, p.role || 'その他')
-            otherElements = [...otherElements, ...ancestorElements.slice(-5)]
+            otherElements.push(...b.elements)
             ox += ancestorBlockW + 30
             otherEndY = Math.max(otherEndY, b.bottomY)
         }
-        // NB: renderAncestorBlock pushed into ancestorElements already; the
-        // slice hack above is messy. Simpler: just add a clean flag, but
-        // for v0.1 we accept the minor duplication and rely on the final
-        // svgParts ordering.
         svgParts.push(...otherElements)
     }
 

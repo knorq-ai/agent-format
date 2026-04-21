@@ -1,0 +1,91 @@
+name: Release
+
+# Tag-driven npm publish with provenance.
+#
+# Tag format: "<pkg>-v<semver>"  where <pkg> is one of
+#   renderer | jp-court | mcp | cli
+# e.g. "renderer-v0.1.6", "cli-v0.2.0".
+#
+# The matching workspace package is version-checked against the tag, built,
+# and published with `npm publish --provenance`, which attaches an OIDC-
+# signed SLSA provenance statement so consumers can verify the tarball came
+# from this repo + this workflow.
+
+on:
+  push:
+    tags:
+      - 'renderer-v*'
+      - 'jp-court-v*'
+      - 'mcp-v*'
+      - 'cli-v*'
+
+# id-token:write is what lets `npm publish --provenance` mint the OIDC
+# attestation. contents:read is all we need from the checkout.
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.1
+        with:
+          node-version: '20'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Resolve package from tag
+        id: pkg
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          # Tag looks like "renderer-v0.1.6". Split at the last "-v".
+          tag="$GITHUB_REF_NAME"
+          name="${tag%-v*}"
+          version="${tag##*-v}"
+          case "$name" in
+            renderer|jp-court|mcp|cli) ;;
+            *) echo "Unsupported package name: $name" >&2; exit 1 ;;
+          esac
+          dir="packages/$name"
+          if [ ! -f "$dir/package.json" ]; then
+            echo "No package.json at $dir" >&2
+            exit 1
+          fi
+          pkg_version=$(node -p "require('./$dir/package.json').version")
+          if [ "$pkg_version" != "$version" ]; then
+            echo "Tag version ($version) does not match $dir/package.json ($pkg_version)" >&2
+            exit 1
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install
+        run: npm ci
+
+      - name: Build (all workspaces — cross-package deps must be fresh)
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Publish with provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: npm publish --provenance --access public
