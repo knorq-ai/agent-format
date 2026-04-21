@@ -1,7 +1,7 @@
 // Smoke + security tests for the renderer. These run against every section
 // type, so regressions in defensive guards or sanitizers fail fast.
-import { describe, expect, it } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render } from '@testing-library/react'
 import {
     AgentRenderer,
     buildPrintableHtml,
@@ -448,5 +448,158 @@ describe('AgentRenderer — security', () => {
         const { container: c2 } = render(<AgentRenderer data={makeAgent([section2])} />)
         const ok = c2.querySelector('.af-label') as HTMLSpanElement | null
         expect(ok?.style.background || ok?.style.backgroundColor).toMatch(/#ff00aa|rgb\(255,\s*0,\s*170\)/i)
+    })
+})
+
+// ─── Editable kanban ──────────────────────────────────────────────────────
+// Kanban is the first section to go editable (week-2 of the round-trip work).
+// These tests pin the contract that downstream consumers (save_agent_file,
+// host-bridge writeback) will rely on.
+
+function makeKanbanAgent(): AgentFile {
+    return makeAgent([
+        {
+            id: 's1',
+            type: 'kanban',
+            label: 'Tasks',
+            order: 0,
+            data: {
+                columns: [
+                    { id: 'c_todo', name: 'To Do', category: 'todo', order: 0 },
+                    { id: 'c_done', name: 'Done', category: 'done', order: 1 },
+                ],
+                items: [
+                    {
+                        id: 'i1',
+                        title: 'Draft spec',
+                        type: 'task',
+                        status: 'c_todo',
+                        priority: 'p1',
+                        labelIds: [],
+                        blockedBy: [],
+                        createdAt: '2026-04-18T00:00:00Z',
+                        updatedAt: '2026-04-18T00:00:00Z',
+                    },
+                ],
+                labels: [],
+            },
+        },
+    ])
+}
+
+describe('AgentRenderer — editable kanban', () => {
+    it('read-only mode: cards are not draggable and double-click does not enter edit', () => {
+        const { container } = render(<AgentRenderer data={makeKanbanAgent()} />)
+        const card = container.querySelector('.af-card') as HTMLDivElement
+        expect(card.getAttribute('draggable')).not.toBe('true')
+        fireEvent.doubleClick(card.querySelector('.af-card-title')!)
+        expect(container.querySelector('.af-card-title-input')).toBeNull()
+    })
+
+    it('editable mode: cards get draggable=true when onChange is provided', () => {
+        const { container } = render(
+            <AgentRenderer data={makeKanbanAgent()} onChange={() => {}} />
+        )
+        const card = container.querySelector('.af-card') as HTMLDivElement
+        expect(card.getAttribute('draggable')).toBe('true')
+    })
+
+    it('drop fires onChange with the item moved to the target column', () => {
+        let captured: AgentFile | null = null
+        const { container } = render(
+            <AgentRenderer data={makeKanbanAgent()} onChange={(next) => (captured = next)} />
+        )
+        const card = container.querySelector('.af-card') as HTMLDivElement
+        const doneColumn = container.querySelectorAll('.af-column')[1] as HTMLDivElement
+
+        // JSDOM doesn't give us a real DataTransfer; synthesize one so the
+        // handler's getData/setData path works. Mirrors what the browser would
+        // populate for a real drag.
+        const store = new Map<string, string>()
+        const dataTransfer = {
+            types: [] as string[],
+            setData(type: string, value: string) {
+                store.set(type, value)
+                if (!this.types.includes(type)) this.types.push(type)
+            },
+            getData(type: string) {
+                return store.get(type) ?? ''
+            },
+            dropEffect: '',
+            effectAllowed: '',
+        }
+
+        fireEvent.dragStart(card, { dataTransfer })
+        fireEvent.dragOver(doneColumn, { dataTransfer })
+        fireEvent.drop(doneColumn, { dataTransfer })
+
+        expect(captured).not.toBeNull()
+        const next = captured as unknown as AgentFile
+        const kanban = next.sections[0] as Extract<Section, { type: 'kanban' }>
+        expect(kanban.data.items[0].status).toBe('c_done')
+        expect(next.updatedAt).not.toBe('2026-04-18T00:00:00Z')
+    })
+
+    it('double-click title → Enter commits a rename', () => {
+        let captured: AgentFile | null = null
+        const { container } = render(
+            <AgentRenderer
+                data={makeKanbanAgent()}
+                onChange={(next) => (captured = next)}
+            />
+        )
+        const title = container.querySelector('.af-card-title') as HTMLElement
+        fireEvent.doubleClick(title)
+        const input = container.querySelector('.af-card-title-input') as HTMLInputElement
+        expect(input).not.toBeNull()
+        fireEvent.change(input, { target: { value: 'Draft spec v2' } })
+        fireEvent.keyDown(input, { key: 'Enter' })
+
+        expect(captured).not.toBeNull()
+        const next = captured as unknown as AgentFile
+        const kanban = next.sections[0] as Extract<Section, { type: 'kanban' }>
+        expect(kanban.data.items[0].title).toBe('Draft spec v2')
+    })
+
+    it('Escape discards a rename — onChange is not called', () => {
+        const onChange = vi.fn()
+        const { container } = render(
+            <AgentRenderer data={makeKanbanAgent()} onChange={onChange} />
+        )
+        fireEvent.doubleClick(container.querySelector('.af-card-title')!)
+        const input = container.querySelector('.af-card-title-input') as HTMLInputElement
+        fireEvent.change(input, { target: { value: 'should be discarded' } })
+        fireEvent.keyDown(input, { key: 'Escape' })
+        expect(onChange).not.toHaveBeenCalled()
+        expect(container.querySelector('.af-card-title-input')).toBeNull()
+    })
+
+    it('dropping a card onto its own column is a no-op — onChange is not called', () => {
+        const onChange = vi.fn()
+        const { container } = render(
+            <AgentRenderer data={makeKanbanAgent()} onChange={onChange} />
+        )
+        const card = container.querySelector('.af-card') as HTMLDivElement
+        const todoColumn = container.querySelectorAll('.af-column')[0] as HTMLDivElement
+
+        const store = new Map<string, string>()
+        const dataTransfer = {
+            types: [] as string[],
+            setData(type: string, value: string) {
+                store.set(type, value)
+                if (!this.types.includes(type)) this.types.push(type)
+            },
+            getData(type: string) {
+                return store.get(type) ?? ''
+            },
+            dropEffect: '',
+            effectAllowed: '',
+        }
+
+        fireEvent.dragStart(card, { dataTransfer })
+        fireEvent.dragOver(todoColumn, { dataTransfer })
+        fireEvent.drop(todoColumn, { dataTransfer })
+
+        expect(onChange).not.toHaveBeenCalled()
     })
 })

@@ -83,6 +83,28 @@ interface AgentRendererProps {
      * Earlier plugins win on conflicting `(sectionType, variant)` pairs.
      */
     plugins?: ReadonlyArray<RendererPlugin>
+    /**
+     * If provided, the renderer becomes editable: section views that support
+     * edits (starting with kanban) surface drag-and-drop and inline-edit
+     * affordances, and call this with the next document state on every edit.
+     * When omitted, the renderer stays read-only — existing callers keep
+     * their current behavior unchanged.
+     */
+    onChange?: (next: AgentFile) => void
+}
+
+const SectionChangeContext = createContext<((next: Section) => void) | undefined>(
+    undefined
+)
+
+/**
+ * A section view that supports edits consumes this to receive a typed
+ * change callback: `const onChange = useSectionChange<KanbanSection>()`.
+ * Returns `undefined` in read-only mode.
+ */
+export function useSectionChange<S extends Section>(): ((next: S) => void) | undefined {
+    const cb = useContext(SectionChangeContext)
+    return cb as ((next: S) => void) | undefined
 }
 
 export function AgentRenderer({
@@ -91,13 +113,31 @@ export function AgentRenderer({
     host,
     showOpenInViewer = true,
     plugins = [],
+    onChange,
 }: AgentRendererProps) {
     const sections = [...data.sections].sort((a, b) => a.order - b.order)
     const docMajor = parseVersionMajor(data.version)
     const unsupportedMajor = docMajor !== null && docMajor > SPEC_MAJOR
 
+    // Fold a typed section edit into the full AgentFile and bump updatedAt
+    // so downstream writers (save_agent_file, git diffs) see the change.
+    // Memoized so context consumers don't re-run unnecessarily.
+    const handleSectionChange = onChange
+        ? (nextSection: Section): void => {
+              const nextSections = data.sections.map((s) =>
+                  s.id === nextSection.id ? nextSection : s
+              )
+              onChange({
+                  ...data,
+                  sections: nextSections,
+                  updatedAt: new Date().toISOString(),
+              })
+          }
+        : undefined
+
     return (
         <HostContext.Provider value={host}>
+            <SectionChangeContext.Provider value={handleSectionChange}>
             <PluginsContext.Provider value={plugins}>
                 <div className={`af-root ${className ?? ''}`}>
                     {unsupportedMajor && (
@@ -155,6 +195,7 @@ export function AgentRenderer({
                     </div>
                 </div>
             </PluginsContext.Provider>
+            </SectionChangeContext.Provider>
         </HostContext.Provider>
     )
 }

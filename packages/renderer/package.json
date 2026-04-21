@@ -1,6 +1,6 @@
 {
   "name": "@agent-format/renderer",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "React renderer for the agent file format (.agent).",
   "license": "MIT",
   "author": "Yuya Morita",

@@ -6,12 +6,20 @@
 
 ## What it does
 
-When connected to Claude Desktop, ChatGPT (via Apps SDK), Cursor, VS Code Copilot, or Goose, this server exposes two tools:
+When connected to Claude Desktop, ChatGPT (via Apps SDK), Cursor, VS Code Copilot, or Goose, this server exposes:
+
+**Rendering tools**
 
 - **`render_agent_file(path)`** — reads an `.agent` file from disk and renders it inline as a kanban / timeline / metrics / log / mindmap / etc. dashboard.
 - **`render_agent_inline(data)`** — renders a full `.agent` JSON object that the agent just generated in this turn.
 
-The rendered UI is the standard `.agent` viewer ([knorq-ai.github.io/agent-format](https://knorq-ai.github.io/agent-format/)) embedded in the chat. All 12 section types work.
+**Authoring skill** — the server also ships the authoring guide so the model learns when and how to emit `.agent` documents instead of HTML artifacts. Three discovery paths for maximum client compatibility:
+
+- **`get_agent_format_skill(section?)`** tool — model-driven; works in every MCP client. Returns the main guide, the per-section data schemas, or worked examples.
+- **Resources** at `agent-format://skill/{main,section-types,examples}` — auto-surfaced by clients that read resource lists.
+- **`agent-format` prompt** — a slash-command in Claude Desktop / Cursor that injects the guide on demand.
+
+The rendered UI is the standard `.agent` viewer ([knorq-ai.github.io/agent-format](https://knorq-ai.github.io/agent-format/)) embedded in the chat. All 13 section types work.
 
 ## Install
 
@@ -90,7 +98,11 @@ Or inline:
 
 > "Turn these TODOs into a kanban and render it."
 
-Claude generates the `.agent` JSON, calls `render_agent_inline` with it, and the dashboard appears in the chat without touching disk.
+Claude calls `get_agent_format_skill` to learn the schema, generates the `.agent` JSON, calls `render_agent_inline`, and the dashboard appears in the chat without touching disk.
+
+The round-trip:
+
+> You drag a card in the rendered kanban and save. Next turn: "What moved?" Claude re-reads the file and sees your edit.
 
 ## How it works
 

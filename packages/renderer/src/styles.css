@@ -184,9 +184,35 @@
     cursor: grab;
 }
 
+.af-card--dragging {
+    opacity: 0.4;
+}
+
+.af-column--drop-target {
+    outline: 2px dashed var(--af-accent, #3b82f6);
+    outline-offset: -2px;
+}
+
 .af-card-title {
     font-weight: 600;
     margin: 0 0 4px;
+}
+
+.af-card-title--editable {
+    cursor: text;
+}
+
+.af-card-title-input {
+    font: inherit;
+    font-weight: 600;
+    width: 100%;
+    margin: 0 0 4px;
+    padding: 2px 4px;
+    border: 1px solid var(--af-accent, #3b82f6);
+    border-radius: 3px;
+    background: var(--af-bg);
+    color: inherit;
+    box-sizing: border-box;
 }
 
 .af-card-desc {

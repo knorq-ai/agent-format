@@ -1,6 +1,6 @@
 {
   "name": "@agent-format/mcp",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "MCP Apps server that renders .agent files as interactive dashboards inline in Claude / ChatGPT / Cursor / VS Code Copilot.",
   "license": "MIT",
   "author": "Yuya Morita",
@@ -21,13 +21,13 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && node build-ui.mjs && cp ../../schemas/agent.schema.json dist/agent.schema.json && chmod +x dist/server.js",
+    "build": "tsc && node build-ui.mjs && cp ../../schemas/agent.schema.json dist/agent.schema.json && rm -rf dist/skill && cp -r ../claude-plugin/skills/agent-format dist/skill && chmod +x dist/server.js",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.ui.json"
   },
   "dependencies": {
     "@agent-format/jp-court": "0.1.2",
-    "@agent-format/renderer": "0.1.5",
+    "@agent-format/renderer": "0.1.6",
     "@modelcontextprotocol/ext-apps": "^1.6.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ajv": "^8.17.0",

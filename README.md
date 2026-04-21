@@ -1,21 +1,39 @@
 # Agent File Format
 
-**A structured alternative to HTML for AI-generated visualizations — editable by the user, re-readable by the agent.**
+**A round-trip loop between an agent and a human, backed by a typed JSON file.**
+
+The agent writes. You edit in a rendered UI. The agent reads your edits next turn.
 
 > Status: **Draft v0.1** — not yet stable. Expect breaking changes until v1.0.
 >
-> **Note:** Not related to [`dotagent`](https://github.com/johnlindquist/dotagent) by @johnlindquist — that tool unifies IDE rule files (CLAUDE.md / `.cursorrules` / etc.). This spec defines a typed JSON artifact format for agent-rendered dashboards.
+> **Note:** Not related to [`dotagent`](https://github.com/johnlindquist/dotagent) by @johnlindquist — that tool unifies IDE rule files (CLAUDE.md / `.cursorrules` / etc.). This project defines a typed JSON artifact for agent-rendered, human-editable state.
 
-When you ask an AI to "turn this email into a kanban" or "visualize this PDF as a mindmap," today it writes hundreds of lines of HTML/CSS for something that should be a few dozen lines of data. The output is static, expensive to generate, and round-trip-lossy — drag a card and the agent can't re-read your edits.
+## The loop
 
-`.agent` is a typed JSON artifact that:
+Today, when you ask an AI to "turn this email into a kanban" or "visualize this PDF as a mindmap," it writes hundreds of lines of HTML/CSS for something that should be a few dozen lines of data. Static output. Expensive to generate. Drag a card and the agent can't re-read your edit.
 
-1. **The agent writes as data** — tens of lines of JSON instead of hundreds of lines of HTML.
-2. **Renders as a rich interactive UI** — kanban, timeline, mindmap, table, metrics, log, and more — via any conformant renderer.
-3. **The user edits directly** — drag cards, inline text, no "copy and re-prompt."
-4. **The agent re-reads next time** — changes persist; state survives across sessions.
+`.agent` closes that loop:
 
-Because the file is just JSON on disk, you can commit it to git, email it, share it between apps. The same artifact is the agent's output *and* the human's working surface.
+1. **The agent writes data.** Tens of lines of typed JSON instead of hundreds of lines of markup.
+2. **A renderer turns it into an interactive dashboard.** Kanban, timeline, mindmap, table, metrics, log, and more — drag, inline-edit, rearrange.
+3. **The file is on disk.** Commit to git, email it, share between apps.
+4. **The agent re-reads next turn.** Your edits flow back; state survives across sessions.
+
+The same artifact is the agent's output *and* the human's working surface.
+
+## One install, any MCP client
+
+The `@agent-format/mcp` server ships three things in one package:
+
+- the **renderer** that draws `.agent` inline in Claude Desktop / Cursor / VS Code Copilot / any MCP Apps client,
+- the **authoring skill** so the model knows when to emit `.agent` instead of an HTML artifact (exposed as an MCP tool, resources, and a slash-command prompt — the pre-spec "skills over MCP" pattern),
+- and the **schema validator** so malformed documents never reach the UI.
+
+```bash
+npx @agent-format/mcp
+```
+
+Add it to your client's MCP config once. No separate plugin install, no extra setup per client. See [`packages/mcp/README.md`](./packages/mcp/README.md) for per-client config.
 
 ---
 

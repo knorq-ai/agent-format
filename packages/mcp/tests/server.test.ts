@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { resolveAgentFile } from '../src/resolve'
+import { resolveAgentFile, saveAgentFile } from '../src/resolve'
 
 const VALID_AGENT = {
     version: '0.1',
@@ -114,5 +114,105 @@ describe('resolveAgentFile', () => {
         const r = await resolveAgentFile(p)
         expect(r.ok).toBe(false)
         expect(r.message).toContain('not a valid .agent')
+    })
+})
+
+describe('saveAgentFile', () => {
+    let tmp: string
+
+    beforeEach(async () => {
+        tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'af-mcp-save-'))
+    })
+    afterEach(async () => {
+        await fs.rm(tmp, { recursive: true, force: true })
+    })
+
+    it('creates a new .agent file when none exists', async () => {
+        const p = path.join(tmp, 'new.agent')
+        const r = await saveAgentFile(p, VALID_AGENT)
+        expect(r.ok).toBe(true)
+        expect(r.bytesWritten).toBeGreaterThan(0)
+        const roundtrip = JSON.parse(await fs.readFile(p, 'utf8'))
+        expect(roundtrip.sections).toEqual([])
+    })
+
+    it('overwrites an existing .agent file atomically', async () => {
+        const p = path.join(tmp, 'existing.agent')
+        await fs.writeFile(p, JSON.stringify({ old: true }))
+        const r = await saveAgentFile(p, VALID_AGENT)
+        expect(r.ok).toBe(true)
+        const roundtrip = JSON.parse(await fs.readFile(p, 'utf8'))
+        expect(roundtrip.name).toBe('t')
+    })
+
+    it('leaves no leftover .tmp-* sibling files after a successful write', async () => {
+        const p = path.join(tmp, 'clean.agent')
+        await saveAgentFile(p, VALID_AGENT)
+        const entries = await fs.readdir(tmp)
+        expect(entries.filter((e) => e.includes('.tmp-'))).toEqual([])
+    })
+
+    it('rejects relative paths before touching the filesystem', async () => {
+        const r = await saveAgentFile('relative.agent', VALID_AGENT)
+        expect(r.ok).toBe(false)
+        expect(r.message).toBe('filePath must be an absolute path')
+    })
+
+    it('rejects a non-.agent extension', async () => {
+        const p = path.join(tmp, 'x.json')
+        const r = await saveAgentFile(p, VALID_AGENT)
+        expect(r.ok).toBe(false)
+        expect(r.message).toContain('.agent extension')
+    })
+
+    it('refuses to overwrite a symlink', async () => {
+        const target = path.join(tmp, 'target')
+        await fs.writeFile(target, 'original')
+        const link = path.join(tmp, 'link.agent')
+        await fs.symlink(target, link)
+        const r = await saveAgentFile(link, VALID_AGENT)
+        expect(r.ok).toBe(false)
+        expect(r.message.toLowerCase()).toContain('symlink')
+        // Target must be untouched — this is the exfil-prevention claim.
+        expect(await fs.readFile(target, 'utf8')).toBe('original')
+    })
+
+    it('refuses to overwrite a directory', async () => {
+        const p = path.join(tmp, 'dir.agent')
+        await fs.mkdir(p)
+        const r = await saveAgentFile(p, VALID_AGENT)
+        expect(r.ok).toBe(false)
+        expect(r.message).toContain('not a regular file')
+    })
+
+    it('rejects data that is not shape-like (no sections array)', async () => {
+        const p = path.join(tmp, 'bad.agent')
+        const r = await saveAgentFile(p, { version: '0.1' })
+        expect(r.ok).toBe(false)
+        expect(r.message).toContain('not a valid .agent')
+        // Must not have created a file when the shape check failed.
+        await expect(fs.stat(p)).rejects.toThrow()
+    })
+
+    it('rejects payloads larger than MAX_AGENT_FILE_BYTES', async () => {
+        const p = path.join(tmp, 'big.agent')
+        // Build a .agent document whose serialized form exceeds 5 MB by
+        // packing a giant string into `description`.
+        const big = {
+            ...VALID_AGENT,
+            description: 'x'.repeat(5 * 1024 * 1024 + 10),
+        }
+        const r = await saveAgentFile(p, big)
+        expect(r.ok).toBe(false)
+        expect(r.message).toContain('limit')
+        await expect(fs.stat(p)).rejects.toThrow()
+    })
+
+    it('pretty-prints with 2-space indent and trailing newline', async () => {
+        const p = path.join(tmp, 'pretty.agent')
+        await saveAgentFile(p, VALID_AGENT)
+        const text = await fs.readFile(p, 'utf8')
+        expect(text.endsWith('\n')).toBe(true)
+        expect(text).toContain('\n  "version"')
     })
 })
