@@ -72,6 +72,12 @@ interface AgentRendererProps {
      */
     host?: HostBridge
     /**
+     * Controls visibility of the document title/description header.
+     * Default: true. Set to false when the host already renders its own
+     * top-level file chrome and repeating the document title wastes space.
+     */
+    showDocumentHeader?: boolean
+    /**
      * Controls visibility of the header "Open in browser" action.
      * Default: true. Set to false when the renderer is already used inside
      * the public viewer itself (avoids a self-referential button).
@@ -111,6 +117,7 @@ export function AgentRenderer({
     data,
     className,
     host,
+    showDocumentHeader = true,
     showOpenInViewer = true,
     plugins = [],
     onChange,
@@ -159,35 +166,37 @@ export function AgentRenderer({
                             best-effort fallbacks — unknown fields may be ignored.
                         </div>
                     )}
-                    <header className="af-header">
-                        <div className="af-header-main">
-                            <h1 className="af-title">
-                                {data.icon && <span>{data.icon}</span>}
-                                <span>{data.name}</span>
-                            </h1>
-                            {data.description && (
-                                <p className="af-description">{data.description}</p>
-                            )}
-                        </div>
-                        {showOpenInViewer && (
-                            <div className="af-header-actions">
-                                <button
-                                    type="button"
-                                    className="af-action-btn"
-                                    onClick={() => {
-                                        // Fire-and-forget; ignore host denial —
-                                        // user will notice if the page didn't
-                                        // open and can retry.
-                                        void openInViewer(data, host)
-                                    }}
-                                    title="Open this file in the public agent-format viewer (new tab)"
-                                >
-                                    <span aria-hidden>↗</span>
-                                    <span>Open in browser</span>
-                                </button>
+                    {showDocumentHeader && (
+                        <header className="af-header">
+                            <div className="af-header-main">
+                                <h1 className="af-title">
+                                    {data.icon && <span>{data.icon}</span>}
+                                    <span>{data.name}</span>
+                                </h1>
+                                {data.description && (
+                                    <p className="af-description">{data.description}</p>
+                                )}
                             </div>
-                        )}
-                    </header>
+                            {showOpenInViewer && (
+                                <div className="af-header-actions">
+                                    <button
+                                        type="button"
+                                        className="af-action-btn"
+                                        onClick={() => {
+                                            // Fire-and-forget; ignore host denial —
+                                            // user will notice if the page didn't
+                                            // open and can retry.
+                                            void openInViewer(data, host)
+                                        }}
+                                        title="Open this file in the public agent-format viewer (new tab)"
+                                    >
+                                        <span aria-hidden>↗</span>
+                                        <span>Open in browser</span>
+                                    </button>
+                                </div>
+                            )}
+                        </header>
+                    )}
                     <div className="af-sections">
                         {sections.map((section) => (
                             <SectionFrame key={section.id} section={section} />
