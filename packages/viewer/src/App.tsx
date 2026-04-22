@@ -49,6 +49,7 @@ export function App() {
     const [state, setState] = useState<LoadState>({ kind: 'empty' })
     const [pasted, setPasted] = useState('')
     const [dragging, setDragging] = useState(false)
+    const [editMode, setEditMode] = useState(false)
 
     const loadFromJson = useCallback((text: string) => {
         let parsed: unknown
@@ -76,7 +77,32 @@ export function App() {
             setState({ kind: 'error', message, issues: shown })
             return
         }
+        setEditMode(false)
         setState({ kind: 'ok', data: parsed as AgentFile })
+    }, [])
+
+    const updateRenderedDoc = useCallback((next: AgentFile) => {
+        setState({ kind: 'ok', data: next })
+    }, [])
+
+    const downloadJson = useCallback((data: AgentFile) => {
+        const json = JSON.stringify(data, null, 2)
+        const blob = new Blob([json], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        const stem = data.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+        a.href = url
+        a.download = `${stem || 'agent-file'}.agent.json`
+        a.rel = 'noopener'
+        document.body.appendChild(a)
+        a.click()
+        window.setTimeout(() => {
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+        }, 100)
     }, [])
 
     const loadFromUrl = useCallback(
@@ -190,20 +216,33 @@ export function App() {
         return (
             <div className="viewer-shell">
                 <div className="toolbar">
-                    <strong>{state.data.name || 'Agent file'}</strong>
+                    <strong>agent-format</strong>
                     <span style={{ color: 'var(--af-fg-muted, #6b7280)' }}>
                         · {state.data.sections.length} sections · spec v{state.data.version}
                     </span>
                     <div className="right">
                         <button
+                            className={`btn btn-secondary${editMode ? ' is-active' : ''}`}
+                            onClick={() => setEditMode((v) => !v)}
+                        >
+                            {editMode ? '編集モード終了' : '編集モード'}
+                        </button>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => downloadJson(state.data)}
+                        >
+                            JSON を保存
+                        </button>
+                        <button
                             className="btn btn-secondary"
                             onClick={() => {
                                 setState({ kind: 'empty' })
                                 setPasted('')
+                                setEditMode(false)
                                 window.history.replaceState(null, '', window.location.pathname)
                             }}
                         >
-                            Load another
+                            別のファイルを開く
                         </button>
                     </div>
                 </div>
@@ -211,7 +250,9 @@ export function App() {
                     <AgentRenderer
                         data={state.data}
                         plugins={VIEWER_PLUGINS}
+                        showDocumentHeader={false}
                         showOpenInViewer={false}
+                        onChange={editMode ? updateRenderedDoc : undefined}
                     />
                 </RenderErrorBoundary>
             </div>

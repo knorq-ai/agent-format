@@ -159,6 +159,7 @@
         "role": { "type": "string" },
         "birthday": { "type": "string" },
         "address": { "type": "string" },
+        "isLastAddress": { "type": "boolean" },
         "deathDate": { "type": "string" },
         "aliases": { "type": "array", "items": { "type": "string" } }
       },
