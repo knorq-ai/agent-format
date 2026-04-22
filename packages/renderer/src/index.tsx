@@ -72,6 +72,12 @@ interface AgentRendererProps {
      */
     host?: HostBridge
     /**
+     * Controls visibility of the document title/description header.
+     * Default: true. Set to false when the host already renders its own
+     * top-level file chrome and repeating the document title wastes space.
+     */
+    showDocumentHeader?: boolean
+    /**
      * Controls visibility of the header "Open in browser" action.
      * Default: true. Set to false when the renderer is already used inside
      * the public viewer itself (avoids a self-referential button).
@@ -83,21 +89,62 @@ interface AgentRendererProps {
      * Earlier plugins win on conflicting `(sectionType, variant)` pairs.
      */
     plugins?: ReadonlyArray<RendererPlugin>
+    /**
+     * If provided, the renderer becomes editable: section views that support
+     * edits (starting with kanban) surface drag-and-drop and inline-edit
+     * affordances, and call this with the next document state on every edit.
+     * When omitted, the renderer stays read-only — existing callers keep
+     * their current behavior unchanged.
+     */
+    onChange?: (next: AgentFile) => void
+}
+
+const SectionChangeContext = createContext<((next: Section) => void) | undefined>(
+    undefined
+)
+
+/**
+ * A section view that supports edits consumes this to receive a typed
+ * change callback: `const onChange = useSectionChange<KanbanSection>()`.
+ * Returns `undefined` in read-only mode.
+ */
+export function useSectionChange<S extends Section>(): ((next: S) => void) | undefined {
+    const cb = useContext(SectionChangeContext)
+    return cb as ((next: S) => void) | undefined
 }
 
 export function AgentRenderer({
     data,
     className,
     host,
+    showDocumentHeader = true,
     showOpenInViewer = true,
     plugins = [],
+    onChange,
 }: AgentRendererProps) {
     const sections = [...data.sections].sort((a, b) => a.order - b.order)
     const docMajor = parseVersionMajor(data.version)
     const unsupportedMajor = docMajor !== null && docMajor > SPEC_MAJOR
 
+    // Fold a typed section edit into the full AgentFile and bump updatedAt
+    // so downstream writers (save_agent_file, git diffs) see the change.
+    // Memoized so context consumers don't re-run unnecessarily.
+    const handleSectionChange = onChange
+        ? (nextSection: Section): void => {
+              const nextSections = data.sections.map((s) =>
+                  s.id === nextSection.id ? nextSection : s
+              )
+              onChange({
+                  ...data,
+                  sections: nextSections,
+                  updatedAt: new Date().toISOString(),
+              })
+          }
+        : undefined
+
     return (
         <HostContext.Provider value={host}>
+            <SectionChangeContext.Provider value={handleSectionChange}>
             <PluginsContext.Provider value={plugins}>
                 <div className={`af-root ${className ?? ''}`}>
                     {unsupportedMajor && (
@@ -119,35 +166,37 @@ export function AgentRenderer({
                             best-effort fallbacks — unknown fields may be ignored.
                         </div>
                     )}
-                    <header className="af-header">
-                        <div className="af-header-main">
-                            <h1 className="af-title">
-                                {data.icon && <span>{data.icon}</span>}
-                                <span>{data.name}</span>
-                            </h1>
-                            {data.description && (
-                                <p className="af-description">{data.description}</p>
-                            )}
-                        </div>
-                        {showOpenInViewer && (
-                            <div className="af-header-actions">
-                                <button
-                                    type="button"
-                                    className="af-action-btn"
-                                    onClick={() => {
-                                        // Fire-and-forget; ignore host denial —
-                                        // user will notice if the page didn't
-                                        // open and can retry.
-                                        void openInViewer(data, host)
-                                    }}
-                                    title="Open this file in the public agent-format viewer (new tab)"
-                                >
-                                    <span aria-hidden>↗</span>
-                                    <span>Open in browser</span>
-                                </button>
+                    {showDocumentHeader && (
+                        <header className="af-header">
+                            <div className="af-header-main">
+                                <h1 className="af-title">
+                                    {data.icon && <span>{data.icon}</span>}
+                                    <span>{data.name}</span>
+                                </h1>
+                                {data.description && (
+                                    <p className="af-description">{data.description}</p>
+                                )}
                             </div>
-                        )}
-                    </header>
+                            {showOpenInViewer && (
+                                <div className="af-header-actions">
+                                    <button
+                                        type="button"
+                                        className="af-action-btn"
+                                        onClick={() => {
+                                            // Fire-and-forget; ignore host denial —
+                                            // user will notice if the page didn't
+                                            // open and can retry.
+                                            void openInViewer(data, host)
+                                        }}
+                                        title="Open this file in the public agent-format viewer (new tab)"
+                                    >
+                                        <span aria-hidden>↗</span>
+                                        <span>Open in browser</span>
+                                    </button>
+                                </div>
+                            )}
+                        </header>
+                    )}
                     <div className="af-sections">
                         {sections.map((section) => (
                             <SectionFrame key={section.id} section={section} />
@@ -155,6 +204,7 @@ export function AgentRenderer({
                     </div>
                 </div>
             </PluginsContext.Provider>
+            </SectionChangeContext.Provider>
         </HostContext.Provider>
     )
 }

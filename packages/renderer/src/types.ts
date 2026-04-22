@@ -293,6 +293,7 @@ export interface FamilyGraphPerson {
     role?: string // free text, renderer-dependent (e.g. 被相続人 / grandparent / 代襲相続人)
     birthday?: string // free text (any calendar / format)
     address?: string
+    isLastAddress?: boolean
     deathDate?: string
     aliases?: string[]
 }

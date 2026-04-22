@@ -10,12 +10,15 @@
 // can see the full family graph without the "silently dropped ancestors"
 // bug of the previous core renderer.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 import {
     downloadPrintableHtml,
+    useSectionChange,
     useHost,
     type RendererPlugin,
+    type FamilyGraphSection,
+    type InheritanceDiagramSection,
     type VariantRendererProps,
 } from '@agent-format/renderer'
 
@@ -28,6 +31,7 @@ interface Person {
     role?: string
     birthday?: string
     address?: string
+    isLastAddress?: boolean
     deathDate?: string
 }
 interface Rel {
@@ -63,6 +67,7 @@ type RenderedBlock = {
     elements: ReactElement[]
     nameBaseY: number
     blockEndY: number
+    overlay: OverlayBox
 }
 
 type ChildGroupResult = {
@@ -71,9 +76,27 @@ type ChildGroupResult = {
     endY: number
 }
 
-function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererProps) {
+type OverlayBox = {
+    id: string
+    name: string
+    x: number
+    y: number
+    width: number
+    height: number
+}
+
+type FamilyGraphVariantSection = FamilyGraphSection | InheritanceDiagramSection
+
+function JPCourtFamilyGraphView(props: VariantRendererProps) {
+    const { setHeaderActions } = props
+    const section = props.section as FamilyGraphVariantSection
     const host = useHost()
+    const onChange = useSectionChange<FamilyGraphVariantSection>()
+    const stageRef = useRef<HTMLDivElement | null>(null)
+    const editorPanelRef = useRef<HTMLDivElement | null>(null)
     const svgRef = useRef<SVGSVGElement | null>(null)
+    const [selectedId, setSelectedId] = useState<string | null>(null)
+    const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
 
     const data = section.data as
         | {
@@ -85,6 +108,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
     const persons = data?.persons ?? []
     const rels = data?.relationships ?? []
     const byId = new Map(persons.map((p) => [p.id, p]))
+    const editable = !!onChange
 
     useEffect(() => {
         if (!setHeaderActions) return
@@ -121,6 +145,21 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
         return () => setHeaderActions(null)
     }, [setHeaderActions, section.id, section.label, persons.length, host])
 
+    useEffect(() => {
+        const stageEl = stageRef.current
+        if (!stageEl) return
+        const syncStageSize = () => {
+            setStageSize({
+                width: stageEl.clientWidth,
+                height: stageEl.clientHeight,
+            })
+        }
+        syncStageSize()
+        const observer = new ResizeObserver(syncStageSize)
+        observer.observe(stageEl)
+        return () => observer.disconnect()
+    }, [])
+
     if (persons.length === 0) {
         return <p className="af-empty">No persons in diagram.</p>
     }
@@ -129,6 +168,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
     const focused = data?.focusedPersonId ? byId.get(data.focusedPersonId) : null
     const decedent = focused || persons.find((p) => Boolean(p.deathDate)) || persons[0]
     if (!decedent) return <p className="af-empty">No decedent.</p>
+    const activeSelectedId = selectedId && byId.has(selectedId) ? selectedId : null
 
     // --- Relationship lookups ---
     const spouseEdgeOf = (personId: string, excludeId?: string): Rel | null => {
@@ -189,8 +229,120 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
         }
         return parents
     }
+    const selectedPerson = activeSelectedId ? byId.get(activeSelectedId) ?? null : null
+
+    const commitGraph = (nextPersons: Person[], nextRelationships: Rel[]) => {
+        if (!onChange) return
+        const nextFocusedPersonId =
+            data?.focusedPersonId && nextPersons.some((p) => p.id === data.focusedPersonId)
+                ? data.focusedPersonId
+                : nextPersons[0]?.id
+        onChange({
+            ...section,
+            data: {
+                ...(section.data ?? {}),
+                persons: nextPersons,
+                relationships: nextRelationships,
+                focusedPersonId: nextFocusedPersonId,
+            },
+        })
+    }
+
+    const nextPersonId = () => {
+        let n = persons.length + 1
+        let candidate = `person-${n}`
+        while (byId.has(candidate)) {
+            n += 1
+            candidate = `person-${n}`
+        }
+        return candidate
+    }
+
+    const updateSelectedField = (field: keyof Person, value: string) => {
+        if (!selectedPerson) return
+        const nextPersons = persons.map((p) => {
+            if (p.id !== selectedPerson.id) return p
+            if (field === 'name') {
+                return { ...p, name: value.trim() || '名称未設定' }
+            }
+            const normalized = value.trim()
+            return {
+                ...p,
+                [field]: normalized === '' ? undefined : value,
+            }
+        })
+        commitGraph(nextPersons, rels)
+    }
+
+    const updateSelectedBooleanField = (field: keyof Person, checked: boolean) => {
+        if (!selectedPerson) return
+        const nextPersons = persons.map((p) =>
+            p.id === selectedPerson.id ? { ...p, [field]: checked || undefined } : p
+        )
+        commitGraph(nextPersons, rels)
+    }
+
+    const addStandalonePerson = () => {
+        const id = nextPersonId()
+        const person: Person = { id, name: '新しい人物', role: 'その他' }
+        setSelectedId(id)
+        commitGraph([...persons, person], rels)
+    }
+
+    const addParent = () => {
+        if (!selectedPerson) return
+        const id = nextPersonId()
+        const person: Person = { id, name: '新しい親', role: '親' }
+        setSelectedId(id)
+        commitGraph([...persons, person], [
+            ...rels,
+            { type: 'parent-child', person1Id: id, person2Id: selectedPerson.id },
+        ])
+    }
+
+    const addChild = () => {
+        if (!selectedPerson) return
+        const id = nextPersonId()
+        const person: Person = { id, name: '新しい子', role: '相続人' }
+        const nextRelationships: Rel[] = [
+            ...rels,
+            { type: 'parent-child', person1Id: selectedPerson.id, person2Id: id },
+        ]
+        const spouse = findSpouse(selectedPerson.id)
+        if (spouse) {
+            nextRelationships.push({
+                type: 'parent-child',
+                person1Id: spouse.id,
+                person2Id: id,
+            })
+        }
+        setSelectedId(id)
+        commitGraph([...persons, person], nextRelationships)
+    }
+
+    const addSpouse = () => {
+        if (!selectedPerson || findSpouse(selectedPerson.id)) return
+        const id = nextPersonId()
+        const person: Person = { id, name: '新しい配偶者', role: '配偶者' }
+        setSelectedId(id)
+        commitGraph([...persons, person], [
+            ...rels,
+            { type: 'spouse', person1Id: selectedPerson.id, person2Id: id },
+        ])
+    }
+
+    const deleteSelected = () => {
+        if (!selectedPerson) return
+        const nextPersons = persons.filter((p) => p.id !== selectedPerson.id)
+        const nextRelationships = rels.filter(
+            (r) => r.person1Id !== selectedPerson.id && r.person2Id !== selectedPerson.id
+        )
+        setSelectedId(nextPersons[0]?.id ?? null)
+        commitGraph(nextPersons, nextRelationships)
+    }
 
     // --- Rendering helpers ---
+    const overlayBoxes: OverlayBox[] = []
     const blockHeight = (p: Person): number => {
         let n = 0
         if (p.address) n++
@@ -210,10 +362,10 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
         const elements: ReactElement[] = []
         let y = topY
         if (p.address) {
-            const lbl = roleLabel === '被相続人' ? '最後の住所' : '住所'
+            const addressLabel = p.isLastAddress ? '最後の住所' : '住所'
             elements.push(
                 <text key={nextKey()} x={x} y={y} fontSize="11pt">
-                    {`${lbl}　${p.address}`}
+                    {`${addressLabel}　${p.address}`}
                 </text>
             )
             y += LINE_H
@@ -254,7 +406,16 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
         )
         const nameBaseY = y
         y += NAME_LINE_H
-        return { elements, nameBaseY, blockEndY: y }
+        const overlay = {
+            id: p.id,
+            name: p.name,
+            x: Math.max(0, x - 10),
+            y: Math.max(0, topY - 8),
+            width: 240,
+            height: y - topY + 8,
+        }
+        overlayBoxes.push(overlay)
+        return { elements, nameBaseY, blockEndY: y, overlay }
     }
 
     // --- Measure helpers for descendants (same as original) ---
@@ -410,6 +571,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
         topY: number
         bottomY: number
         elements: ReactElement[]
+        overlay: OverlayBox
     }
     const ancestorByPersonId = new Map<string, AncestorBlock>()
 
@@ -449,6 +611,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
         const els: ReactElement[] = []
         let y = topY + LINE_H
         if (p.address) {
+            const addressLabel = p.isLastAddress ? '最後の住所' : '住所'
             els.push(
                 <text
                     key={nextKey()}
@@ -456,7 +619,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
                     y={y}
                     fontSize="10pt"
                 >
-                    {`住所　${truncate(p.address, 18)}`}
+                    {`${addressLabel}　${truncate(p.address, 18)}`}
                 </text>
             )
             y += LINE_H - 4
@@ -518,6 +681,14 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
             topY,
             bottomY,
             elements: els,
+            overlay: {
+                id: p.id,
+                name: p.name,
+                x: leftX,
+                y: topY,
+                width: ancestorBlockW,
+                height: bottomY - topY + 10,
+            },
         }
     }
 
@@ -550,6 +721,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
         topY: decTopY,
         bottomY: dec.blockEndY,
         elements: [],
+        overlay: dec.overlay,
     })
 
     // Render ancestor rows from bottom (nearest parent) upward to the top.
@@ -574,6 +746,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
                 ancestorByPersonId.set(parent.id, block)
                 renderedParents.push(block)
                 ancestorElements.push(...block.elements)
+                overlayBoxes.push(block.overlay)
                 cursorX += ancestorBlockW + 30
             }
             // Spouse double-line between two-parent pairs.
@@ -754,6 +927,7 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
             }
             const b = renderAncestorBlock(p, ox, oy, p.role || 'その他')
             otherElements.push(...b.elements)
+            overlayBoxes.push(b.overlay)
             ox += ancestorBlockW + 30
             otherEndY = Math.max(otherEndY, b.bottomY)
         }
@@ -761,6 +935,185 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
     }
 
     const svgH = Math.max(baseBottomY, otherEndY) + 30
+    const selectedOverlay =
+        editable && selectedPerson
+            ? overlayBoxes.find((overlay) => overlay.id === selectedPerson.id) ?? null
+            : null
+    const renderEditorAsPopover =
+        Boolean(selectedOverlay) && stageSize.width >= 920 && stageSize.height > 0
+    let editorPopoverStyle:
+        | {
+              left: string
+              top: string
+              width: string
+              maxHeight: string
+          }
+        | undefined
+    if (renderEditorAsPopover && selectedOverlay) {
+        const margin = 16
+        const panelWidth = Math.min(380, Math.max(320, stageSize.width * 0.32))
+        const scaleX = stageSize.width / 1400
+        const scaleY = stageSize.height / svgH
+        const preferredLeft = (selectedOverlay.x + selectedOverlay.width + 18) * scaleX
+        const fallbackLeft = selectedOverlay.x * scaleX - panelWidth - 18
+        let left =
+            preferredLeft + panelWidth <= stageSize.width - margin
+                ? preferredLeft
+                : fallbackLeft
+        left = Math.max(margin, Math.min(left, stageSize.width - panelWidth - margin))
+        const estimatedHeight = 340
+        let top = selectedOverlay.y * scaleY
+        if (top + estimatedHeight > stageSize.height - margin) {
+            top = Math.max(margin, stageSize.height - estimatedHeight - margin)
+        }
+        const maxHeight = Math.max(220, stageSize.height - top - margin)
+        editorPopoverStyle = {
+            left: `${left}px`,
+            top: `${top}px`,
+            width: `${panelWidth}px`,
+            maxHeight: `${maxHeight}px`,
+        }
+    }
+
+    useEffect(() => {
+        if (!renderEditorAsPopover || !selectedPerson) return
+        const onPointerDown = (event: PointerEvent) => {
+            const target = event.target
+            if (!(target instanceof Node)) return
+            if (editorPanelRef.current?.contains(target)) return
+            if (
+                target instanceof Element &&
+                target.closest('.af-jp-court-node-hitbox')
+            ) {
+                return
+            }
+            setSelectedId(null)
+        }
+        document.addEventListener('pointerdown', onPointerDown)
+        return () => document.removeEventListener('pointerdown', onPointerDown)
+    }, [renderEditorAsPopover, selectedPerson])
+
+    const editorPanel = editable ? (
+        <div
+            ref={editorPanelRef}
+            className={`af-jp-court-editor-panel${
+                renderEditorAsPopover ? ' af-jp-court-editor-panel--popover' : ''
+            }`}
+            style={renderEditorAsPopover ? editorPopoverStyle : undefined}
+        >
+            <div className="af-jp-court-editor-toolbar">
+                <button type="button" className="af-action-btn" onClick={addStandalonePerson}>
+                    人物を追加
+                </button>
+                <button
+                    type="button"
+                    className="af-action-btn"
+                    onClick={addParent}
+                    disabled={!selectedPerson}
+                >
+                    親を追加
+                </button>
+                <button
+                    type="button"
+                    className="af-action-btn"
+                    onClick={addChild}
+                    disabled={!selectedPerson}
+                >
+                    子を追加
+                </button>
+                <button
+                    type="button"
+                    className="af-action-btn"
+                    onClick={addSpouse}
+                    disabled={!selectedPerson || Boolean(selectedPerson && findSpouse(selectedPerson.id))}
+                >
+                    配偶者を追加
+                </button>
+                <button
+                    type="button"
+                    className="af-action-btn"
+                    onClick={deleteSelected}
+                    disabled={!selectedPerson}
+                >
+                    人物を削除
+                </button>
+            </div>
+            <p className="af-jp-court-editor-note">
+                図の人物をクリックして内容を編集できます。
+            </p>
+            {selectedPerson ? (
+                <>
+                    <p className="af-jp-court-editor-selected">
+                        <strong>{selectedPerson.name}</strong> を編集中
+                    </p>
+                    <div className="af-jp-court-editor-grid">
+                        <div className="af-jp-court-editor-field af-jp-court-editor-field--full">
+                            <label htmlFor={`${section.id}-person-address`}>住所</label>
+                            <input
+                                id={`${section.id}-person-address`}
+                                type="text"
+                                value={selectedPerson.address ?? ''}
+                                onChange={(e) => updateSelectedField('address', e.target.value)}
+                            />
+                        </div>
+                        <div className="af-jp-court-editor-field af-jp-court-editor-field--full">
+                            <label className="af-jp-court-editor-checkbox">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(selectedPerson.isLastAddress)}
+                                    onChange={(e) =>
+                                        updateSelectedBooleanField(
+                                            'isLastAddress',
+                                            e.target.checked
+                                        )
+                                    }
+                                />
+                                <span>住所ラベルを「最後の住所」にする</span>
+                            </label>
+                        </div>
+                        <div className="af-jp-court-editor-field">
+                            <label htmlFor={`${section.id}-person-birthday`}>生年月日</label>
+                            <input
+                                id={`${section.id}-person-birthday`}
+                                type="text"
+                                value={selectedPerson.birthday ?? ''}
+                                onChange={(e) => updateSelectedField('birthday', e.target.value)}
+                            />
+                        </div>
+                        <div className="af-jp-court-editor-field">
+                            <label htmlFor={`${section.id}-person-death`}>死亡日</label>
+                            <input
+                                id={`${section.id}-person-death`}
+                                type="text"
+                                value={selectedPerson.deathDate ?? ''}
+                                onChange={(e) => updateSelectedField('deathDate', e.target.value)}
+                            />
+                        </div>
+                        <div className="af-jp-court-editor-field">
+                            <label htmlFor={`${section.id}-person-role`}>続柄</label>
+                            <input
+                                id={`${section.id}-person-role`}
+                                type="text"
+                                value={selectedPerson.role ?? ''}
+                                onChange={(e) => updateSelectedField('role', e.target.value)}
+                            />
+                        </div>
+                        <div className="af-jp-court-editor-field af-jp-court-editor-field--full">
+                            <label htmlFor={`${section.id}-person-name`}>氏名</label>
+                            <input
+                                id={`${section.id}-person-name`}
+                                type="text"
+                                value={selectedPerson.name}
+                                onChange={(e) => updateSelectedField('name', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </>
+            ) : (
+                <p className="af-jp-court-editor-empty">編集する人物を図から選択してください。</p>
+            )}
+        </div>
+    ) : null
 
     // The jp-court template is a legal print artifact — always black-on-white
     // per court-filing convention. Force the panel's own theme here so a
@@ -777,17 +1130,43 @@ function JPCourtFamilyGraphView({ section, setHeaderActions }: VariantRendererPr
                 borderRadius: 6,
             }}
         >
-            <svg
-                ref={svgRef}
-                xmlns="http://www.w3.org/2000/svg"
-                width="100%"
-                viewBox={`0 0 1400 ${svgH}`}
-                style={{ overflow: 'visible' }}
-                role="img"
-                aria-label="相続関係説明図"
-            >
-                {svgParts}
-            </svg>
+            <div ref={stageRef} className="af-jp-court-stage">
+                <svg
+                    ref={svgRef}
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="100%"
+                    viewBox={`0 0 1400 ${svgH}`}
+                    style={{ overflow: 'visible' }}
+                    role="img"
+                    aria-label="相続関係説明図"
+                >
+                    {svgParts}
+                </svg>
+                {editable && (
+                    <div className="af-jp-court-editor-layer">
+                        {overlayBoxes.map((overlay) => (
+                            <button
+                                key={overlay.id}
+                                type="button"
+                                className={`af-jp-court-node-hitbox${
+                                    overlay.id === activeSelectedId ? ' is-selected' : ''
+                                }`}
+                                style={{
+                                    left: `${(overlay.x / 1400) * 100}%`,
+                                    top: `${(overlay.y / svgH) * 100}%`,
+                                    width: `${(overlay.width / 1400) * 100}%`,
+                                    height: `${(overlay.height / svgH) * 100}%`,
+                                }}
+                                onClick={() => setSelectedId(overlay.id)}
+                                aria-label={`${overlay.name} を編集`}
+                                title={`${overlay.name} を編集`}
+                            />
+                        ))}
+                    </div>
+                )}
+                {renderEditorAsPopover && editorPanel}
+            </div>
+            {!renderEditorAsPopover && editorPanel}
         </div>
     )
 }

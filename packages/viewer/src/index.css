@@ -105,6 +105,12 @@ body {
     border: 1px solid var(--af-border, #e5e7eb);
 }
 
+.btn.is-active {
+    border-color: var(--af-accent, #2251ff);
+    color: var(--af-accent, #2251ff);
+    background: var(--af-accent-soft, #eef2ff);
+}
+
 .error {
     margin-top: 12px;
     padding: 10px 12px;
@@ -159,4 +165,10 @@ body {
     background: var(--af-bg-alt, #f7f7f8);
     padding: 1px 5px;
     border-radius: 3px;
+}
+
+@media print {
+    .toolbar {
+        display: none !important;
+    }
 }
