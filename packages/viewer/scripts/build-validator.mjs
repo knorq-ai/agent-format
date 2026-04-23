@@ -37,8 +37,8 @@ const code = standaloneCode(ajv, validate)
 // resolve. Rewrite them into ESM imports hoisted to the top of the file so
 // the module loads under the viewer's strict CSP.
 const esmImports = new Map([
-    ['ajv/dist/runtime/ucs2length', '__ucs2length'],
-    ['ajv-formats/dist/formats', '__ajvFormats'],
+    ['ajv/dist/runtime/ucs2length', '__ucs2lengthImport'],
+    ['ajv-formats/dist/formats', '__ajvFormatsImport'],
 ])
 let rewritten = code
 for (const [mod, local] of esmImports) {
@@ -52,11 +52,28 @@ for (const [mod, local] of esmImports) {
 const importBlock = [...esmImports.entries()]
     .map(([mod, local]) => `import * as ${local} from "${mod}";`)
     .join('\n')
+const interopBlock = [
+    // Ajv standalone emits CommonJS helper references. Under Vite's ESM +
+    // CommonJS interop, these helpers may surface as nested `default.default`
+    // objects instead of the callable/value the generated code expects.
+    // Normalize both modules once here so the generated validator stays stable
+    // in browser bundles and in tests.
+    'const __ucs2length = typeof __ucs2lengthImport.default === "function"',
+    '    ? __ucs2lengthImport.default',
+    '    : typeof __ucs2lengthImport.default?.default === "function"',
+    '        ? __ucs2lengthImport.default.default',
+    '        : __ucs2lengthImport.default ?? __ucs2lengthImport;',
+    'const __ajvFormats = __ajvFormatsImport.fullFormats',
+    '    ? __ajvFormatsImport',
+    '    : __ajvFormatsImport.default?.fullFormats',
+    '        ? __ajvFormatsImport.default',
+    '        : __ajvFormatsImport.default ?? __ajvFormatsImport;',
+].join('\n')
 
 mkdirSync(outDir, { recursive: true })
 const banner =
     '// GENERATED — do not edit. Produced by scripts/build-validator.mjs from\n' +
     '// schemas/agent.schema.json. Re-run `npm run build:validator` to refresh.\n' +
     '/* eslint-disable */\n'
-writeFileSync(outPath, banner + importBlock + '\n' + rewritten, 'utf8')
+writeFileSync(outPath, banner + importBlock + '\n' + interopBlock + '\n' + rewritten, 'utf8')
 process.stderr.write(`wrote ${outPath} (${code.length} bytes)\n`)
