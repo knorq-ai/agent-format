@@ -5,6 +5,18 @@ The format follows semver; see `SPEC.md` § 5 for what counts as breaking.
 
 ## [Unreleased] — spec v0.1 hardening
 
+### Renderer / jp-court / viewer
+
+- `@agent-format/renderer` is now editable for host-driven section updates via
+  `onChange`, `useSectionChange`, and optional document-header suppression for
+  embedded hosts.
+- `@agent-format/jp-court` now supports interactive family-graph editing:
+  node hitboxes, localized Japanese editor popover, add/remove person flows,
+  outside-click dismissal, and explicit `isLastAddress` address labeling.
+- The standalone viewer now exposes a dedicated edit mode for `jp-court`
+  family graphs, JSON download, and cleaner host chrome without duplicate
+  document headers.
+
 ### Spec / schema
 
 - Root documents now MAY carry a `$schema` string for editor integration.
