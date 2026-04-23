@@ -9,11 +9,7 @@
 import type { AgentFile } from './types'
 import { type HostBridge, fallbackOpenLink, fallbackDownload } from './host'
 import { sanitizeSvgForEmbed } from './sanitize'
-
-// Public viewer endpoint for the `.agent` format. The `#<encoded-json>` hash
-// form is documented in packages/viewer/src/App.tsx and stable across
-// viewer versions (renders the data client-side, no upload).
-const VIEWER_URL = 'https://knorq-ai.github.io/agent-format/'
+import { buildViewerUrl } from './share'
 
 const VALID_PAGE_SIZES = new Map<string, string>([
     ['a5', 'A5'],
@@ -45,10 +41,9 @@ export async function openInViewer(
     data: AgentFile,
     host?: HostBridge
 ): Promise<boolean> {
-    const json = JSON.stringify(data)
     // Hash fragment is never sent to the server, so sensitive data (legal
     // documents, audit logs) stays on the client.
-    const url = `${VIEWER_URL}#${encodeURIComponent(json)}`
+    const url = buildViewerUrl(data)
     if (host?.openLink) return host.openLink(url)
     return fallbackOpenLink(url)
 }

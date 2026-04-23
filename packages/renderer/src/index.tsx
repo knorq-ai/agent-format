@@ -28,6 +28,11 @@ export {
     buildPrintableHtml,
     downloadPrintableHtml,
 } from './actions'
+export {
+    buildViewerUrl,
+    encodeViewerHashPayload,
+    decodeViewerHashPayload,
+} from './share'
 export { sanitizeSvgForEmbed } from './sanitize'
 export { validateSemantics, type SemanticError } from './validate'
 
