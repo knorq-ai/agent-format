@@ -12,7 +12,7 @@ Standalone web viewer for [`.agent`](https://github.com/knorq-ai/agent-format) f
 | File picker | Click the drop zone |
 | Paste | Paste JSON into the textarea, click Render |
 | URL | `/?url=https://example.com/my.agent` |
-| Hash | `/#{encodeURIComponent(jsonString)}` |
+| Hash | `/#b64:{base64url(utf8(jsonString))}` |
 
 ## Development
 

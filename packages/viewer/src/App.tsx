@@ -1,5 +1,9 @@
 import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
-import { AgentRenderer, type AgentFile } from '@agent-format/renderer'
+import {
+    AgentRenderer,
+    decodeViewerHashPayload,
+    type AgentFile,
+} from '@agent-format/renderer'
 import { jpCourtPlugin } from '@agent-format/jp-court'
 import { validateAgentDoc } from './validator'
 
@@ -182,16 +186,22 @@ export function App() {
         const params = new URLSearchParams(window.location.search)
         const urlParam = params.get('url')
         if (urlParam) {
-            loadFromUrl(urlParam)
+            void loadFromUrl(urlParam)
             return
         }
         const hash = window.location.hash
         if (hash && hash.length > 1) {
             try {
-                const decoded = decodeURIComponent(hash.slice(1))
+                const decoded = decodeViewerHashPayload(hash)
                 loadFromJson(decoded)
-            } catch {
-                // ignore; fall through to empty state
+            } catch (error) {
+                setState({
+                    kind: 'error',
+                    message:
+                        error instanceof Error
+                            ? error.message
+                            : 'Invalid inline viewer payload.',
+                })
             }
         }
     }, [loadFromUrl, loadFromJson])
@@ -330,7 +340,7 @@ export function App() {
 
             <div className="helper">
                 Sharing options: <code>?url=&lt;url&gt;</code> fetches and renders a remote file.{' '}
-                <code>#&lt;encoded-json&gt;</code> renders inline data from the URL hash. See the{' '}
+                <code>#&lt;inline-data&gt;</code> renders inline data from the URL hash. See the{' '}
                 <a href="https://github.com/knorq-ai/agent-format">spec</a> for file format details.
             </div>
         </div>
