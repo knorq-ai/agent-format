@@ -1,6 +1,6 @@
 {
   "name": "@agent-format/jp-court",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "@agent-format/renderer plugin: jp-court (相続関係説明図) visual template for family-graph sections. Japanese legal-filing typography, double-line spouse edges, PDF export. Does NOT filter persons — the .agent file is the source of truth.",
   "license": "MIT",
   "author": "Yuya Morita",
@@ -32,12 +32,12 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@agent-format/renderer": "^0.1.5",
+    "@agent-format/renderer": "^0.1.6",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"
   },
   "devDependencies": {
-    "@agent-format/renderer": "^0.1.5",
+    "@agent-format/renderer": "^0.1.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "react": "^19.0.0",
