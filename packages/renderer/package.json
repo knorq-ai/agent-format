@@ -1,6 +1,6 @@
 {
   "name": "@agent-format/renderer",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "React renderer for the agent file format (.agent).",
   "license": "MIT",
   "author": "Yuya Morita",
@@ -52,5 +52,8 @@
     "kanban",
     "mcp",
     "llm"
-  ]
+  ],
+  "dependencies": {
+    "fflate": "^0.8.2"
+  }
 }

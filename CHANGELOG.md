@@ -5,6 +5,16 @@ The format follows semver; see `SPEC.md` § 5 for what counts as breaking.
 
 ## [Unreleased] — spec v0.1 hardening
 
+### Renderer
+
+- `buildViewerUrl` / `encodeViewerHashPayload` now emit a new `c1:` prefix
+  (raw DEFLATE + base64url via `fflate`) so "Open in browser" share links
+  are dramatically shorter for realistic Japanese documents — the
+  `examples/inheritance-jp-3gen.agent` demo shrinks from ~6.7 KB to
+  ~1.5 KB. `decodeViewerHashPayload` still accepts the legacy `b64:` and
+  percent-encoded formats; tiny payloads fall back to `b64:` when deflate
+  would add overhead.
+
 ### Renderer / jp-court / viewer
 
 - `@agent-format/renderer` is now editable for host-driven section updates via

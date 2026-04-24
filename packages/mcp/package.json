@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@agent-format/jp-court": "0.1.3",
-    "@agent-format/renderer": "0.1.6",
+    "@agent-format/renderer": "0.1.7",
     "@modelcontextprotocol/ext-apps": "^1.6.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ajv": "^8.17.0",
