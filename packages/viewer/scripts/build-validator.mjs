@@ -36,38 +36,59 @@ const code = standaloneCode(ajv, validate)
 // still emitted as CommonJS `require(...)` calls, which the browser can't
 // resolve. Rewrite them into ESM imports hoisted to the top of the file so
 // the module loads under the viewer's strict CSP.
-const esmImports = new Map([
+//
+// The rewrite swaps each known `require("mod")[...suffix]` pattern with a
+// normalized alias that matches the exact shape the generated code expects.
+// This matters because esbuild's `__toESM(..., 1)` (Node-compat) interop sets
+// `ns.default = module.exports`, so naively substituting `require("m")` with
+// the namespace `ns` would land on `ns.default.prop` instead of `exports.prop`
+// — turning `func2 = require("ucs2length").default` into the CJS exports
+// object rather than the ucs2length function. AJV standalone only emits three
+// reference shapes, so we rewrite each one explicitly and define matching
+// aliases below.
+const namespaceImports = new Map([
     ['ajv/dist/runtime/ucs2length', '__ucs2lengthImport'],
     ['ajv-formats/dist/formats', '__ajvFormatsImport'],
 ])
+const referenceRewrites = [
+    // `require("…/ucs2length").default` is the ucs2length function itself.
+    {
+        pattern: /require\("ajv\/dist\/runtime\/ucs2length"\)\.default/g,
+        replacement: '__ucs2length',
+    },
+    // `require("ajv-formats/dist/formats")` resolves to the CJS exports
+    // namespace (with `.fullFormats`, `.fastFormats`, etc. attached).
+    {
+        pattern: /require\("ajv-formats\/dist\/formats"\)/g,
+        replacement: '__ajvFormats',
+    },
+]
 let rewritten = code
-for (const [mod, local] of esmImports) {
-    const escaped = mod.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    // `require("mod").default` → `__mod.default`, `require("mod").x.y` → `__mod.x.y`
-    rewritten = rewritten.replace(
-        new RegExp(`require\\("${escaped}"\\)`, 'g'),
-        local
-    )
+for (const { pattern, replacement } of referenceRewrites) {
+    rewritten = rewritten.replace(pattern, replacement)
 }
-const importBlock = [...esmImports.entries()]
+const importBlock = [...namespaceImports.entries()]
     .map(([mod, local]) => `import * as ${local} from "${mod}";`)
     .join('\n')
 const interopBlock = [
-    // Ajv standalone emits CommonJS helper references. Under Vite's ESM +
-    // CommonJS interop, these helpers may surface as nested `default.default`
-    // objects instead of the callable/value the generated code expects.
-    // Normalize both modules once here so the generated validator stays stable
-    // in browser bundles and in tests.
-    'const __ucs2length = typeof __ucs2lengthImport.default === "function"',
-    '    ? __ucs2lengthImport.default',
-    '    : typeof __ucs2lengthImport.default?.default === "function"',
-    '        ? __ucs2lengthImport.default.default',
-    '        : __ucs2lengthImport.default ?? __ucs2lengthImport;',
-    'const __ajvFormats = __ajvFormatsImport.fullFormats',
-    '    ? __ajvFormatsImport',
-    '    : __ajvFormatsImport.default?.fullFormats',
-    '        ? __ajvFormatsImport.default',
-    '        : __ajvFormatsImport.default ?? __ajvFormatsImport;',
+    // Normalize esbuild/Vite CJS interop shapes. The generated code references
+    // `__ucs2length` (expected to be the function) and `__ajvFormats` (expected
+    // to be the CJS exports namespace that exposes `.fullFormats`). Under
+    // esbuild's Node-compat `__toESM` wrapper, the bare ESM namespace object
+    // puts the real values one level deep inside `.default`; unwrap that.
+    'const __ucs2length = (() => {',
+    '    const ns = __ucs2lengthImport;',
+    '    if (typeof ns === "function") return ns;',
+    '    if (ns && typeof ns.default === "function") return ns.default;',
+    '    if (ns && ns.default && typeof ns.default.default === "function") return ns.default.default;',
+    '    throw new Error("agent-format viewer: ucs2length runtime helper missing");',
+    '})();',
+    'const __ajvFormats = (() => {',
+    '    const ns = __ajvFormatsImport;',
+    '    if (ns && ns.fullFormats) return ns;',
+    '    if (ns && ns.default && ns.default.fullFormats) return ns.default;',
+    '    throw new Error("agent-format viewer: ajv-formats runtime helper missing");',
+    '})();',
 ].join('\n')
 
 mkdirSync(outDir, { recursive: true })
