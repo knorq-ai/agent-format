@@ -50,6 +50,9 @@ The format follows semver; see `SPEC.md` § 5 for what counts as breaking.
 
 ### MCP
 
+- `@agent-format/mcp` bumped to `0.2.2` to pick up
+  `@agent-format/renderer@0.1.7` — hosts get dramatically shorter
+  "Open in browser" share URLs (deflate-compressed `c1:` hash payload).
 - `@agent-format/mcp` continues this release line as `0.2.1` so npm can
   publish it as `latest` above the already-published `0.2.0`.
 - `render_agent_inline` now validates the full document against the JSON
