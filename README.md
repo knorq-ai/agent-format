@@ -2,6 +2,8 @@
 
 **A structured alternative to HTML for AI-generated visualizations — editable by the user, re-readable by the agent.**
 
+> 🔗 **Try the viewer:** [knorq-ai.github.io/agent-format](https://knorq-ai.github.io/agent-format/) — drop any `.agent` file, paste JSON, or open a share link. No install.
+
 > Status: **Draft v0.1** — not yet stable. Expect breaking changes until v1.0.
 >
 > **Note:** Not related to [`dotagent`](https://github.com/johnlindquist/dotagent) by @johnlindquist — that tool unifies IDE rule files (CLAUDE.md / `.cursorrules` / etc.). This spec defines a typed JSON artifact format for agent-rendered dashboards.
