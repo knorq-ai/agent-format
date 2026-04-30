@@ -13,6 +13,18 @@ When connected to Claude Desktop, ChatGPT (via Apps SDK), Cursor, VS Code Copilo
 
 The rendered UI is the standard `.agent` viewer ([knorq-ai.github.io/agent-format](https://knorq-ai.github.io/agent-format/)) embedded in the chat. All 12 section types work.
 
+### Claude Code fallback
+
+Claude Code (CLI and desktop wrapper) does not currently render MCP UI resources inline. When this server detects a `claude-code` client, it appends an `Open in viewer: <url>` line to the tool result text. The URL points at the hosted viewer with the document encoded in the URL hash (raw-deflate + base64url, identical to the renderer's share-link format), so opening it shows exactly what an inline render would have shown — no upload, no extra service.
+
+If the encoded URL would exceed ~100 KB (very large documents), the server emits a short note pointing at the viewer landing page instead — drop the `.agent` file there to view it.
+
+Override with environment variables:
+
+- `AGENT_FORMAT_VIEWER` — `auto` (default, detect via `clientInfo.name`), `always`, or `never`.
+- `AGENT_FORMAT_VIEWER_CLIENTS` — comma-separated client name substrings (case-insensitive) that extend the built-in non-UI client list. Use this for any client we don't yet recognize, e.g. `AGENT_FORMAT_VIEWER_CLIENTS=cursor,goose`.
+- `AGENT_FORMAT_VIEWER_URL` — base URL for the viewer (defaults to `https://knorq-ai.github.io/agent-format/`). Set this if you self-host the viewer.
+
 ## Install
 
 ```bash
