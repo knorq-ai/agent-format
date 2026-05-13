@@ -109,6 +109,34 @@ describe('JSON Schema', () => {
         expect(validate(bad)).toBe(false)
     })
 
+    it('accepts null for optional FamilyGraphPerson string fields', () => {
+        const ok = {
+            ...base,
+            sections: [
+                {
+                    id: 's1',
+                    type: 'family-graph',
+                    label: 'F',
+                    order: 0,
+                    data: {
+                        persons: [
+                            {
+                                id: 'p1',
+                                name: '山田 太郎',
+                                role: null,
+                                birthday: null,
+                                address: null,
+                                deathDate: null,
+                            },
+                        ],
+                        relationships: [],
+                    },
+                },
+            ],
+        }
+        expect(validate(ok)).toBe(true)
+    })
+
     it('rejects a section missing its required `data`', () => {
         const bad = {
             ...base,

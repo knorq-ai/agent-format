@@ -290,11 +290,11 @@ export interface ReferencesSection extends SectionBase {
 export interface FamilyGraphPerson {
     id: string
     name: string
-    role?: string // free text, renderer-dependent (e.g. 被相続人 / grandparent / 代襲相続人)
-    birthday?: string // free text (any calendar / format)
-    address?: string
+    role?: string | null // free text, renderer-dependent (e.g. 被相続人 / grandparent / 代襲相続人)
+    birthday?: string | null // free text (any calendar / format)
+    address?: string | null
     isLastAddress?: boolean
-    deathDate?: string
+    deathDate?: string | null
     aliases?: string[]
 }
 

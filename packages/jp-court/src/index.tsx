@@ -28,11 +28,11 @@ import {
 interface Person {
     id: string
     name: string
-    role?: string
-    birthday?: string
-    address?: string
+    role?: string | null
+    birthday?: string | null
+    address?: string | null
     isLastAddress?: boolean
-    deathDate?: string
+    deathDate?: string | null
 }
 interface Rel {
     type: 'spouse' | 'parent-child'

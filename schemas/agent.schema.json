@@ -156,11 +156,11 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "name": { "type": "string", "minLength": 1 },
-        "role": { "type": "string" },
-        "birthday": { "type": "string" },
-        "address": { "type": "string" },
+        "role": { "type": ["string", "null"] },
+        "birthday": { "type": ["string", "null"] },
+        "address": { "type": ["string", "null"] },
         "isLastAddress": { "type": "boolean" },
-        "deathDate": { "type": "string" },
+        "deathDate": { "type": ["string", "null"] },
         "aliases": { "type": "array", "items": { "type": "string" } }
       },
       "additionalProperties": false
