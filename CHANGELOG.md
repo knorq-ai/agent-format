@@ -29,6 +29,12 @@ The format follows semver; see `SPEC.md` § 5 for what counts as breaking.
 
 ### Spec / schema
 
+- `FamilyGraphPerson.role`, `birthday`, `address`, and `deathDate` now accept
+  `null` in addition to a string or being omitted. LLM-driven generators and
+  TypeScript/OpenAPI codegens routinely emit `null` for "value is absent",
+  and forcing producers to special-case alive persons (no `deathDate`) was
+  surfacing as cascading `oneOf` validation errors in the viewer. Renderers
+  treat `null` the same as the field being omitted.
 - Root documents now MAY carry a `$schema` string for editor integration.
 - Removed legacy `inheritance-diagram` section type from the schema; writers
   MUST emit `family-graph`. Renderers SHOULD continue to accept the old

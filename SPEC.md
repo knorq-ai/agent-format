@@ -312,7 +312,7 @@ data: {
   persons: {
     id, name,
     role?,                           // free text; renderers may use as label
-    birthday?, deathDate?, address?,
+    birthday?, deathDate?, address?, // optional; may be omitted or `null` (treated as absent)
     aliases?: string[]
   }[],
   relationships: {
