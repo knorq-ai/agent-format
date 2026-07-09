@@ -25,6 +25,14 @@ interface ValidateFunction {
     errors?: { instancePath?: string; message?: string }[] | null
 }
 import { isAgentLike, resolveAgentFile } from './resolve.js'
+import {
+    DEFAULT_VIEWER_URL,
+    MAX_VIEWER_URL_BYTES,
+    buildViewerUrl,
+    readClientAllowlist,
+    readViewerMode,
+    shouldEmitViewerUrl,
+} from './viewer-url.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -91,6 +99,43 @@ const server = new McpServer({
     version: pkg.version,
 })
 
+// Viewer-URL fallback: clients that don't render MCP UI resources inline
+// (notably Claude Code) only see the tool result text, so we append a hosted
+// viewer link there. `AGENT_FORMAT_VIEWER` overrides detection (auto/always/
+// never), `AGENT_FORMAT_VIEWER_CLIENTS` extends the built-in non-UI client
+// list, and `AGENT_FORMAT_VIEWER_URL` swaps the base for self-hosted viewers.
+const VIEWER_MODE = readViewerMode()
+const VIEWER_CLIENT_ALLOWLIST = readClientAllowlist()
+const VIEWER_BASE_URL = process.env.AGENT_FORMAT_VIEWER_URL?.trim() || DEFAULT_VIEWER_URL
+
+function buildFallbackContent(data: unknown, baseText: string): CallToolResult['content'] {
+    const clientName = server.server.getClientVersion()?.name
+    if (!shouldEmitViewerUrl(VIEWER_MODE, clientName, VIEWER_CLIENT_ALLOWLIST)) {
+        return [{ type: 'text', text: baseText }]
+    }
+    let url: string
+    try {
+        url = buildViewerUrl(data, { base: VIEWER_BASE_URL })
+    } catch {
+        // Encoding refused (e.g. empty payload). Skip the URL silently —
+        // the base text is still useful and the structuredContent path is
+        // unaffected.
+        return [{ type: 'text', text: baseText }]
+    }
+    if (Buffer.byteLength(url, 'utf8') > MAX_VIEWER_URL_BYTES) {
+        // Document is too large to embed as a self-contained share link.
+        // Point at the viewer landing page so the user can drop the file
+        // in directly instead of pasting a multi-megabyte URL.
+        return [
+            {
+                type: 'text',
+                text: `${baseText}\n\nThis document is too large to embed in a viewer URL. Open ${VIEWER_BASE_URL} and drop the .agent file in to view it.`,
+            },
+        ]
+    }
+    return [{ type: 'text', text: `${baseText}\n\nOpen in viewer: ${url}` }]
+}
+
 registerAppTool(
     server,
     'render_agent_file',
@@ -121,7 +166,7 @@ registerAppTool(
                 return invalidAgentResult(validateAgent.errors)
             }
             return {
-                content: [{ type: 'text', text: result.message }],
+                content: buildFallbackContent(result.data, result.message),
                 structuredContent: { data: result.data } as Record<string, unknown>,
             }
         } catch (err) {
@@ -175,10 +220,9 @@ registerAppTool(
             return invalidAgentResult(validateAgent.errors)
         }
         const name = typeof data.name === 'string' ? data.name : 'agent data'
+        const baseText = `Rendering "${name}" (${data.sections.length} sections) inline.`
         return {
-            content: [
-                { type: 'text', text: `Rendering "${name}" (${data.sections.length} sections) inline.` },
-            ],
+            content: buildFallbackContent(data, baseText),
             structuredContent: { data } as Record<string, unknown>,
         }
     },
